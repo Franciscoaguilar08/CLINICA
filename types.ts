@@ -10,6 +10,21 @@ export type RiskTrend = 'IMPROVING' | 'STABLE' | 'WORSENING';
 
 export type CareGap = 'LOST_TO_FOLLOW_UP' | 'NO_ACTIVE_SCRIPT' | 'MISSED_APPOINTMENT' | 'DATA_MISSING';
 
+// Definición estricta del Label para el modelo predictivo
+export type PredictionLabel = 'HOSPITALIZATION_30D' | 'READMISSION_90D' | 'MORTALITY_1Y';
+
+export interface ModelMetrics {
+  version: string;
+  trainingPeriod: string; // e.g., "2019-2022"
+  validationPeriod: string; // e.g., "2023 (Temporal Split)"
+  auc: number;
+  sensitivity: number; // Recall
+  specificity: number;
+  ppv: number; // Precision
+  alertRate: number; // % of population flagged
+  nTotal: number;
+}
+
 export interface Medication {
   id: string;
   name: string;
@@ -30,16 +45,18 @@ export interface LabResult {
 
 export interface ClinicalEvent {
   id: string;
-  date: string;
-  type: 'Hospitalization' | 'ER Visit' | 'Consultation' | 'Medication Change' | 'Missed Appointment';
+  date: string; // ISO 8601
+  type: 'Hospitalization' | 'ER Visit' | 'Consultation' | 'Medication Change' | 'Missed Appointment' | 'Lab';
   description: string;
+  value?: string; // Para mostrar datos crudos en timeline
 }
 
-// Estructura para explicar el riesgo (Explainable AI)
+// Estructura para explicar el riesgo (Explainable AI / SHAP)
 export interface RiskFactor {
-  factor: string; // e.g., "Aumento de Creatinina"
+  factor: string; // Feature Name
   contribution: 'HIGH' | 'MEDIUM' | 'LOW';
-  description: string; // "Desviación del 30% respecto al baseline"
+  value: number; // SHAP value simulado
+  description: string; // Traducción clínica
 }
 
 // Datos basales del paciente para comparación longitudinal (Self-Comparison)
@@ -55,13 +72,14 @@ export interface Patient {
   name: string;
   age: number;
   gender: string;
-  conditions: string[]; // e.g., ['IC', 'DM2', 'HTA']
+  conditions: string[]; 
   
   // Stratification & Explainability
   riskLevel: RiskLevel;
-  riskScore: number; // 0-100
+  riskScore: number; // Probability 0-100% for the specific Label
+  predictionLabel: PredictionLabel; // Qué estamos prediciendo
   riskTrend: RiskTrend;
-  riskDrivers: string[]; // Top 3 factors explaining the score (SHAP-style summary)
+  riskDrivers: RiskFactor[]; // Ahora usa la interfaz RiskFactor más detallada
   careGaps: CareGap[]; 
 
   // Logistics
@@ -80,7 +98,7 @@ export interface Patient {
   egfr: number; 
 
   medications: Medication[];
-  history: ClinicalEvent[];
+  history: ClinicalEvent[]; // Timeline completa
 }
 
 // Business Value Metrics

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Patient } from "../types";
 
@@ -8,15 +9,15 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 const riskAnalysisSchema = {
   type: Type.OBJECT,
   properties: {
-    executiveSummary: { type: Type.STRING, description: "Resumen clínico ejecutivo del caso." },
-    riskScore: { type: Type.INTEGER, description: "Puntaje de riesgo calculado (0-100)." },
+    executiveSummary: { type: Type.STRING, description: "Resumen clínico ejecutivo centrado en el evento a predecir." },
+    riskScore: { type: Type.INTEGER, description: "Probabilidad (0-100) del evento target (ej: Internación < 30 días)." },
     riskLevel: { type: Type.STRING, description: "Nivel de riesgo textual (BAJO, MEDIO, ALTO, CRÍTICO)." },
     
     // Fundamentación Teórica
     argentinaGuidelines: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "Lista de Guías de Práctica Clínica (GPC) del Ministerio de Salud o Sociedades Argentinas (SAC/SAD/SAHA) aplicadas."
+      description: "Guías GPC MinSalud/SAC aplicables."
     },
     scientificPapers: {
       type: Type.ARRAY,
@@ -24,12 +25,11 @@ const riskAnalysisSchema = {
         type: Type.OBJECT,
         properties: {
           title: { type: Type.STRING },
-          source: { type: Type.STRING, description: "Journal o Fuente (ej: NEJM, Revista Arg Cardiología)" },
+          source: { type: Type.STRING },
           year: { type: Type.STRING },
-          relevance: { type: Type.STRING, description: "Por qué aplica a este paciente." }
+          relevance: { type: Type.STRING }
         }
-      },
-      description: "Papers científicos que respaldan la decisión."
+      }
     },
 
     // Factores de Riesgo (SHAP visualization data)
@@ -40,7 +40,7 @@ const riskAnalysisSchema = {
         properties: {
           factor: { type: Type.STRING },
           impact: { type: Type.STRING, description: "ALTO, MEDIO, BAJO" },
-          description: { type: Type.STRING }
+          description: { type: Type.STRING, description: "Explicación causal (Feature Importance)." }
         }
       }
     },
@@ -52,14 +52,13 @@ const riskAnalysisSchema = {
         type: Type.OBJECT,
         properties: {
           month: { type: Type.STRING, description: "Mes 1, Mes 2, etc." },
-          riskUntreated: { type: Type.INTEGER, description: "Riesgo estimado (0-100) si NO se interviene." },
-          riskTreated: { type: Type.INTEGER, description: "Riesgo estimado (0-100) SI se interviene." }
+          riskUntreated: { type: Type.INTEGER, description: "Riesgo si NO se actúa." },
+          riskTreated: { type: Type.INTEGER, description: "Riesgo proyectado post-intervención." }
         }
-      },
-      description: "Proyección a 6 meses de la evolución del riesgo."
+      }
     },
 
-    suggestedAction: { type: Type.STRING, description: "Acción clínica prioritaria." }
+    suggestedAction: { type: Type.STRING, description: "Acción para mitigar el riesgo predicho." }
   },
   required: ["executiveSummary", "argentinaGuidelines", "scientificPapers", "riskFactors", "riskProjection", "suggestedAction"]
 };
@@ -72,27 +71,29 @@ export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
   const model = "gemini-3-pro-preview";
   
   const prompt = `
-    Actúa como un SISTEMA EXPERTO DE SOPORTE A LA DECISIÓN CLÍNICA (CDSS) especializado en medicina interna y cardiología para Argentina.
+    Actúa como un MODELO PREDICTIVO CLÍNICO (XGBoost/LightGBM) interpretado por un Sistema Experto.
     
-    TUS PRINCIPIOS (Dataset Mínimo Viable):
-    1. Si falta información (consultas/recetas), asume el PEOR escenario (abandono de tratamiento).
-    2. Prioriza la seguridad del paciente (interacciones farmacológicas).
+    OBJETIVO DE PREDICCIÓN (LABEL): **HOSPITALIZATION_30D** (Probabilidad de internación o muerte en próximos 30 días).
 
-    CONTEXTO DEL PACIENTE:
-    - Paciente: ${patient.name}, ${patient.age} años.
-    - Patologías: ${patient.conditions.join(', ')}.
-    - eGFR: ${patient.egfr} (Fundamental para ajuste renal).
-    - Fármacos: ${patient.medications.map(m => m.name).join(', ')}.
-    - Brechas: ${patient.careGaps.join(', ') || "Sin brechas administrativas"}.
-    - Última consulta: ${patient.lastEncounter}.
+    REGLAS DE ORO (ANTI-DATA LEAKAGE):
+    1. Solo puedes usar datos HISTÓRICOS provistos en 'history', 'medications', 'labs'.
+    2. No inventes eventos futuros.
+    3. Si el paciente no tiene eventos recientes (>6 meses), el riesgo aumenta drásticamente por "Pérdida de Seguimiento".
+
+    CONTEXTO DEL PACIENTE (FEATURES):
+    - ID: ${patient.id} | Edad: ${patient.age}
+    - Comorbilidades: ${patient.conditions.join(', ')}
+    - Eventos (Timeline): ${JSON.stringify(patient.history)}
+    - Medicación Activa: ${patient.medications.map(m => m.name).join(', ')}
+    - eGFR: ${patient.egfr}
+    - Último contacto: ${patient.lastEncounter}
 
     TAREA:
-    Genera un análisis estructurado en JSON.
+    Genera un JSON explicando por qué el modelo predice el Score actual.
     
-    REGLAS DE EVIDENCIA (CRÍTICO):
-    1. **argentinaGuidelines**: Debes citar ESPECÍFICAMENTE guías del Ministerio de Salud de la Nación, SAC (Sociedad Argentina de Cardiología) o SADI. Ej: "Guía de Práctica Clínica Nacional sobre Prevención de Enfermedades Cardiovasculares (MinSalud 2022)".
-    2. **scientificPapers**: Busca evidencia real o consensos (ej: estudios sobre polifarmacia en ancianos, guías ESC/AHA si complementan).
-    3. **riskProjection**: Genera una simulación numérica de 6 meses. Si el paciente no se trata (riskUntreated), el riesgo debe subir. Si se trata (riskTreated), debe bajar o estabilizarse.
+    1. **SHAP Values (riskFactors)**: Identifica qué variables empujan el score hacia arriba. Ej: "Internación hace 20 días" (Feature temporal fuerte), "Polifarmacia > 8" (Feature estructural).
+    2. **Validación Local**: Cita guías argentinas (MinSalud, SAC) que justifiquen por qué esas variables son riesgosas.
+    3. **Proyección**: Simula la curva de riesgo a 6 meses.
   `;
 
   try {
@@ -114,10 +115,6 @@ export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
   }
 };
 
-/**
- * Legacy search (kept for sidebar tools if needed)
- */
 export const searchClinicalGuidelines = async (query: string): Promise<{ text: string; sources: any[] }> => {
-  // ... (Existing implementation if needed, otherwise can be ignored for the main analysis)
   return { text: "", sources: [] };
 };

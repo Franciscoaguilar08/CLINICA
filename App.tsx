@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { MOCK_PATIENTS, OUTCOMES_DATA } from './constants';
+import { MOCK_PATIENTS, OUTCOMES_DATA, MODEL_METRICS } from './constants';
 import { Patient, RiskLevel, RiskTrend, CareGap } from './types';
 import { VitalChart } from './components/VitalChart';
 import { AbkInfo } from './components/AbkInfo';
@@ -9,40 +10,36 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { 
   Activity, 
   AlertTriangle, 
-  Search, 
-  User, 
-  FileText, 
-  Pill, 
-  TrendingUp, 
-  TrendingDown,
-  Minus,
   BrainCircuit, 
-  ShieldAlert,
-  ChevronRight,
-  ArrowUpRight,
-  Ghost,
-  Clock,
-  ClipboardList,
-  BarChart3,
-  DollarSign,
-  HeartPulse,
-  Scale,
-  Stethoscope,
-  Building2,
-  CheckCircle2,
-  ArrowRight,
-  Lock,
-  AlertOctagon,
-  Users,
-  DatabaseZap,
+  ChevronRight, 
+  Ghost, 
+  Clock, 
+  BarChart3, 
+  DollarSign, 
+  HeartPulse, 
+  Scale, 
+  Stethoscope, 
+  Building2, 
+  CheckCircle2, 
+  ArrowRight, 
+  Lock, 
+  AlertOctagon, 
+  User, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
+  Database,
   ShieldCheck,
   LayoutDashboard,
   Cpu,
   Plus,
-  Database,
-  BookOpen,
   Library,
-  GraduationCap
+  GraduationCap,
+  CalendarDays,
+  History,
+  Shield,
+  Pill,
+  DatabaseZap
 } from 'lucide-react';
 
 // --- Components Helpers ---
@@ -75,6 +72,38 @@ const CareGapBadge = ({ gaps }: { gaps: CareGap[] }) => {
     );
 };
 
+// --- Model Validation Header ---
+const ModelValidationHeader = () => {
+  return (
+    <div className="bg-slate-900 text-slate-300 text-xs py-2 px-4 flex justify-between items-center border-b border-slate-700">
+      <div className="flex items-center gap-4">
+        <span className="font-mono text-emerald-400 font-bold">{MODEL_METRICS.version}</span>
+        <span className="flex items-center gap-1"><Database size={10} /> Train: {MODEL_METRICS.trainingPeriod}</span>
+        <span className="flex items-center gap-1"><ShieldCheck size={10} /> Validation: {MODEL_METRICS.validationPeriod}</span>
+      </div>
+      <div className="flex items-center gap-4 font-mono">
+        <span>AUC: <strong className="text-white">{MODEL_METRICS.auc}</strong></span>
+        <span>Sens: <strong className="text-white">{MODEL_METRICS.sensitivity}</strong></span>
+        <span>PPV: <strong className="text-white">{MODEL_METRICS.ppv}</strong></span>
+        <span>N={MODEL_METRICS.nTotal.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
+
+// --- Logo Component (KEPT FROM PREVIOUS STEP) ---
+const BrandLogo = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
+  const containerClasses = size === 'sm' ? 'w-8 h-8 p-1.5' : size === 'lg' ? 'w-16 h-16 p-3' : 'w-10 h-10 p-2';
+  const iconSize = size === 'sm' ? 16 : size === 'lg' ? 32 : 24;
+
+  // The logo retains the pink/purple identity as requested
+  return (
+     <div className={`${containerClasses} rounded-xl bg-gradient-to-br from-pink-500 via-violet-600 to-blue-700 text-white shadow-lg shadow-violet-200/50 flex items-center justify-center`}>
+         <Shield size={iconSize} fill="currentColor" className="text-white/90" />
+     </div>
+  );
+};
+
 // --- Landing Page ---
 const LandingPage = ({ onEnter }: { onEnter: () => void }) => {
   return (
@@ -82,10 +111,8 @@ const LandingPage = ({ onEnter }: { onEnter: () => void }) => {
       {/* Navbar */}
       <header className="fixed w-full bg-white/80 backdrop-blur-md border-b border-slate-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-                <div className="bg-blue-600 p-2 rounded-lg text-white shadow-md shadow-blue-200">
-                    <HeartPulse size={20} strokeWidth={3} />
-                </div>
+            <div className="flex items-center gap-3">
+                <BrandLogo />
                 <span className="text-xl font-bold text-slate-900 tracking-tight">Abk Clinical</span>
             </div>
             <div className="flex items-center gap-4">
@@ -187,16 +214,6 @@ const LandingPage = ({ onEnter }: { onEnter: () => void }) => {
                             </div>
                          </div>
                     </div>
-                    {/* Floating Cards */}
-                    <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce duration-[3000ms]">
-                        <div className="bg-emerald-100 p-2 rounded-full text-emerald-600">
-                            <DollarSign size={20} />
-                        </div>
-                        <div>
-                            <div className="text-sm font-bold text-slate-900">$125k Ahorrados</div>
-                            <div className="text-xs text-slate-500">Este mes</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -248,65 +265,6 @@ const LandingPage = ({ onEnter }: { onEnter: () => void }) => {
          </div>
       </div>
 
-      {/* Target Audience Section */}
-      <div className="py-24 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid lg:grid-cols-2 gap-12">
-                  <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-200">
-                      <div className="flex items-center gap-4 mb-6">
-                          <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
-                              <Building2 size={32} />
-                          </div>
-                          <div>
-                              <h3 className="text-2xl font-bold text-slate-900">Para Financiadores</h3>
-                              <p className="text-slate-500">Obras Sociales y Prepagas</p>
-                          </div>
-                      </div>
-                      <ul className="space-y-4">
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-emerald-500 mt-1 shrink-0" size={20}/>
-                              <span>Reducción del 15-20% en costos por internaciones evitables.</span>
-                          </li>
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-emerald-500 mt-1 shrink-0" size={20}/>
-                              <span>Auditoría de medicación de alto costo automática.</span>
-                          </li>
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-emerald-500 mt-1 shrink-0" size={20}/>
-                              <span>Tablero de control de población de riesgo en tiempo real.</span>
-                          </li>
-                      </ul>
-                  </div>
-
-                  <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-200">
-                      <div className="flex items-center gap-4 mb-6">
-                          <div className="p-3 bg-indigo-100 text-indigo-600 rounded-full">
-                              <Stethoscope size={32} />
-                          </div>
-                          <div>
-                              <h3 className="text-2xl font-bold text-slate-900">Para Médicos</h3>
-                              <p className="text-slate-500">Clínicos y Especialistas</p>
-                          </div>
-                      </div>
-                      <ul className="space-y-4">
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-indigo-500 mt-1 shrink-0" size={20}/>
-                              <span>Responde la pregunta diaria: "¿A quién debo llamar hoy?"</span>
-                          </li>
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-indigo-500 mt-1 shrink-0" size={20}/>
-                              <span>Línea de tiempo clínica automatizada, sin carga manual.</span>
-                          </li>
-                          <li className="flex items-start gap-3 text-slate-700">
-                              <CheckCircle2 className="text-indigo-500 mt-1 shrink-0" size={20}/>
-                              <span>Alertas de interacciones farmacológicas contextualizadas.</span>
-                          </li>
-                      </ul>
-                  </div>
-              </div>
-          </div>
-      </div>
-
       {/* CTA Footer */}
       <div className="bg-white border-t border-slate-100 py-16">
           <div className="max-w-4xl mx-auto px-4 text-center">
@@ -345,8 +303,8 @@ const LoginPage = ({ onLogin }: { onLogin: (role: 'doctor' | 'consultant', id: s
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
                 <div className="bg-slate-900 p-6 text-center">
-                    <div className="inline-flex bg-blue-600 p-2 rounded-lg text-white mb-4">
-                        <HeartPulse size={32} />
+                    <div className="flex justify-center mb-4">
+                        <BrandLogo size="lg" />
                     </div>
                     <h2 className="text-2xl font-bold text-white">Abk Clinical</h2>
                     <p className="text-slate-400 text-sm mt-1">Acceso Seguro a Plataforma Clínica</p>
@@ -402,10 +360,48 @@ const LoginPage = ({ onLogin }: { onLogin: (role: 'doctor' | 'consultant', id: s
     );
 };
 
-// --- Outcomes Dashboard (B2B Module) ---
-const OutcomesWidget = () => {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+// --- Clinical Command Center (Dashboard) ---
+const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void }) => {
+  const sortedPatients = [...MOCK_PATIENTS].sort((a, b) => {
+      // Prioritization: Care Gaps > High Risk > Score
+      if (a.careGaps.length > 0 && b.careGaps.length === 0) return -1;
+      if (b.careGaps.length > 0 && a.careGaps.length === 0) return 1;
+      return b.riskScore - a.riskScore;
+  });
+
+  const getRiskColor = (level: RiskLevel) => {
+    switch(level) {
+      case RiskLevel.CRITICAL: return 'bg-red-600 text-white border-red-700 animate-pulse';
+      case RiskLevel.HIGH: return 'bg-red-100 text-red-800 border-red-200';
+      case RiskLevel.MEDIUM: return 'bg-amber-100 text-amber-800 border-amber-200';
+      case RiskLevel.LOW: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            Panel de Gestión Poblacional
+          </h1>
+          <p className="text-slate-500 text-sm flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Modelo v2.4 Activo
+            <span className="text-slate-300">|</span> 
+            Target: <strong>Internación &#60; 30 días</strong>
+          </p>
+        </div>
+        <div className="flex gap-3">
+           <button className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm">
+              <Database size={16} /> Importar Base
+           </button>
+           <button onClick={onAddPatient} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm shadow-sm">
+              <Plus size={18} /> Nuevo Paciente
+           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Internaciones Evitadas</span>
                 <div className="flex items-center gap-2 text-emerald-600">
@@ -414,7 +410,6 @@ const OutcomesWidget = () => {
                 </div>
                 <span className="text-xs text-emerald-600/80 font-medium mt-1">Estimadas este mes</span>
             </div>
-            
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reducción Re-ingresos</span>
                 <div className="flex items-center gap-2 text-blue-600">
@@ -441,73 +436,28 @@ const OutcomesWidget = () => {
                 </div>
                 <span className="text-xs text-slate-400 font-medium mt-1">ROI Mensual Estimado</span>
             </div>
-        </div>
-    );
-};
-
-// --- Clinical Command Center (Dashboard) ---
-const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void }) => {
-  const sortedPatients = [...MOCK_PATIENTS].sort((a, b) => {
-      // Prioritization: Care Gaps > High Risk > Score
-      if (a.careGaps.length > 0 && b.careGaps.length === 0) return -1;
-      if (b.careGaps.length > 0 && a.careGaps.length === 0) return 1;
-      return b.riskScore - a.riskScore;
-  });
-
-  const getRiskColor = (level: RiskLevel) => {
-    switch(level) {
-      case RiskLevel.CRITICAL: return 'bg-red-600 text-white border-red-700 animate-pulse';
-      case RiskLevel.HIGH: return 'bg-red-100 text-red-800 border-red-200';
-      case RiskLevel.MEDIUM: return 'bg-amber-100 text-amber-800 border-amber-200';
-      case RiskLevel.LOW: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            Panel de Gestión Poblacional
-          </h1>
-          <p className="text-slate-500 text-sm">
-            Estratificación de riesgo basada en "Dataset Mínimo Viable" (DMV).
-          </p>
-        </div>
-        <div className="flex gap-3">
-           <button className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm">
-              <Database size={16} /> Importar Base
-           </button>
-           <button onClick={onAddPatient} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm shadow-sm">
-              <Plus size={18} /> Nuevo Paciente
-           </button>
-        </div>
       </div>
-
-      <OutcomesWidget />
 
       {/* Main Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <BarChart3 size={14} /> Prioridad de Atención Diaria
+                <BarChart3 size={14} /> Cohorte de Riesgo Alto (Top 10%)
             </h2>
         </div>
         <table className="w-full text-left">
           <thead className="bg-white text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
             <tr>
               <th className="px-6 py-4">Paciente</th>
-              <th className="px-6 py-4">Factor de Riesgo Principal (Explainability)</th>
-              <th className="px-6 py-4">Fármacos</th>
-              <th className="px-6 py-4">Score</th>
-              <th className="px-6 py-4">Ultimo Contacto</th>
+              <th className="px-6 py-4">Principal Driver (SHAP)</th>
+              <th className="px-6 py-4">Probabilidad (30d)</th>
+              <th className="px-6 py-4">Ultimo Dato</th>
               <th className="px-6 py-4">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {sortedPatients.map((patient) => {
                 const isGhost = patient.careGaps.length > 0;
-                const isPolypharmacy = patient.medications.length >= 5;
                 
                 return (
               <tr key={patient.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${isGhost ? 'bg-slate-50/50' : ''}`} onClick={() => onSelectPatient(patient)}>
@@ -525,30 +475,18 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                     </div>
                     <div>
                       <div className="font-medium text-slate-900">{patient.name}</div>
-                      <div className="text-xs text-slate-500 flex gap-1">
-                          {patient.conditions[0]} 
-                          {patient.conditions.length > 1 && <span className="text-slate-400">+{patient.conditions.length - 1}</span>}
-                      </div>
+                      <div className="text-xs text-slate-500">ID: {patient.id}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                    <div className="flex flex-col gap-1">
-                        {patient.careGaps.length > 0 ? (
-                             <CareGapBadge gaps={patient.careGaps} />
-                        ) : (
-                             <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block w-fit">
-                                {patient.riskDrivers[0]}
+                        {patient.riskDrivers.slice(0, 1).map((driver, idx) => (
+                             <span key={idx} className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block w-fit">
+                                {driver.factor}
                              </span>
-                        )}
+                        ))}
                    </div>
-                </td>
-                <td className="px-6 py-4">
-                    <div className={`flex items-center gap-1 font-bold text-xs px-2 py-1 rounded w-fit ${isPolypharmacy ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600'}`}>
-                        <Pill size={12} />
-                        {patient.medications.length}
-                        {isPolypharmacy && <AlertTriangle size={12} className="ml-1 fill-amber-500 text-amber-500" />}
-                    </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
@@ -596,16 +534,13 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                         <p className="text-lg leading-relaxed font-medium">
                             {data.executiveSummary}
                         </p>
-                        <div className="mt-4 inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm border border-white/10">
-                             <ShieldCheck size={14} /> Validación Clínica IA
-                        </div>
                     </div>
                 </div>
 
                 <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-center items-center text-center">
-                     <div className="text-xs font-bold uppercase text-slate-400 mb-2">Score de Riesgo</div>
+                     <div className="text-xs font-bold uppercase text-slate-400 mb-2">Score (Internación 30d)</div>
                      <div className={`text-5xl font-extrabold ${data.riskScore > 70 ? 'text-red-600' : 'text-emerald-600'} mb-2`}>
-                         {data.riskScore}
+                         {data.riskScore}%
                      </div>
                      <div className="px-3 py-1 rounded bg-slate-100 text-slate-600 text-xs font-bold border border-slate-200">
                          {data.riskLevel}
@@ -664,7 +599,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                 {/* Factors List */}
                 <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 shadow-sm overflow-y-auto max-h-[380px]">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Scale size={18} className="text-indigo-600" /> Factores Determinantes
+                        <Scale size={18} className="text-indigo-600" /> SHAP Values (Causas)
                     </h3>
                     <div className="space-y-3">
                         {data.riskFactors?.map((factor: any, idx: number) => (
@@ -684,8 +619,6 @@ const AIAnalysisView = ({ data }: { data: any }) => {
 
             {/* Bottom: Evidence & Guidelines */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Guidelines */}
                 <div className="bg-white rounded-xl border border-blue-100 p-6 shadow-sm">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <Library size={18} className="text-blue-600" /> Fundamentación Teórica (Guías AR)
@@ -699,9 +632,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                         ))}
                     </ul>
                 </div>
-
-                 {/* Scientific Papers */}
-                <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
+                 <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <GraduationCap size={18} className="text-emerald-600" /> Evidencia Científica (Papers)
                     </h3>
@@ -719,24 +650,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                         ))}
                     </div>
                 </div>
-
             </div>
-
-             {/* Action Bar */}
-             <div className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                     <div className="bg-blue-600 p-2 rounded-lg animate-pulse">
-                         <ArrowRight size={20} />
-                     </div>
-                     <div>
-                         <div className="text-xs font-bold text-slate-400 uppercase">Acción Prioritaria Sugerida</div>
-                         <div className="font-bold text-lg">{data.suggestedAction}</div>
-                     </div>
-                 </div>
-                 <button className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition-colors">
-                     Ejecutar Acción
-                 </button>
-             </div>
         </div>
     );
 };
@@ -745,43 +659,13 @@ const AIAnalysisView = ({ data }: { data: any }) => {
 const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => void }) => {
   const [aiAnalysisData, setAiAnalysisData] = useState<any | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'clinical' | 'pharma' | 'guidelines'>('clinical');
+  const [activeTab, setActiveTab] = useState<'clinical' | 'timeline' | 'pharma'>('clinical');
 
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
-    // analyzePatientRisk now returns a JSON Object, not a string
     const result = await analyzePatientRisk(patient);
     setAiAnalysisData(result);
     setIsAnalyzing(false);
-  };
-
-  const hasCareGaps = patient.careGaps.length > 0;
-  const isPolypharmacy = patient.medications.length >= 5;
-
-  // Helper for Longitudinal Comparison
-  const DeviationCard = ({ label, current, baseline, unit }: { label: string, current?: number, baseline?: number, unit: string }) => {
-      if(!current || !baseline) return null;
-      const diff = current - baseline;
-      const percent = (diff / baseline) * 100;
-      const isBad = label === 'eGFR' ? diff < 0 : diff > 0; // Simplified logic
-      
-      return (
-          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between">
-              <span className="text-xs text-slate-500 uppercase font-semibold">{label}</span>
-              <div className="flex justify-between items-end mt-2">
-                  <div>
-                      <span className="text-xl font-bold text-slate-800">{current}</span>
-                      <span className="text-xs text-slate-400 ml-1">{unit}</span>
-                  </div>
-                  <div className="text-right">
-                       <div className={`text-xs font-bold ${isBad ? 'text-red-500' : 'text-emerald-500'}`}>
-                           {diff > 0 ? '+' : ''}{diff.toFixed(1)}
-                       </div>
-                       <div className="text-[10px] text-slate-400">vs Basal ({baseline})</div>
-                  </div>
-              </div>
-          </div>
-      );
   };
 
   return (
@@ -797,11 +681,6 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-bold relative">
              {patient.name.split(' ').map(n => n[0]).join('')}
-             {isPolypharmacy && (
-                 <div className="absolute -bottom-1 -right-1 bg-amber-100 text-amber-600 p-1 rounded-full border border-white">
-                     <Pill size={16} />
-                 </div>
-             )}
           </div>
           <div>
              <h1 className="text-2xl font-bold text-slate-900">{patient.name}</h1>
@@ -812,26 +691,14 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                 <span>•</span>
                 <span>ID: {patient.id}</span>
              </div>
-             <div className="flex flex-wrap gap-2 mt-2">
-                {patient.conditions.map(c => (
-                    <span key={c} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded border border-blue-100">{c}</span>
-                ))}
-             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
             <div className="text-center">
-                <div className="text-xs text-slate-500 font-semibold uppercase">Risk Score</div>
+                <div className="text-xs text-slate-500 font-semibold uppercase">Prob. Internación (30d)</div>
                 <div className={`text-2xl font-bold ${patient.riskScore > 50 ? 'text-red-600' : 'text-emerald-600'}`}>
                     {patient.riskScore}%
-                </div>
-            </div>
-             <div className="h-8 w-px bg-slate-200"></div>
-            <div className="text-center">
-                <div className="text-xs text-slate-500 font-semibold uppercase">eGFR</div>
-                <div className={`text-2xl font-bold ${patient.egfr < 60 ? 'text-amber-600' : 'text-slate-700'}`}>
-                    {patient.egfr}
                 </div>
             </div>
         </div>
@@ -840,10 +707,10 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
       <div className="border-b border-slate-200">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button onClick={() => setActiveTab('clinical')} className={`${activeTab === 'clinical' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
-             <Activity size={16} /> Perfil Longitudinal
+             <Activity size={16} /> Dashboard
           </button>
-          <button onClick={() => setActiveTab('pharma')} className={`${activeTab === 'pharma' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
-             <Pill size={16} /> Farmacología ({patient.medications.length})
+          <button onClick={() => setActiveTab('timeline')} className={`${activeTab === 'timeline' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+             <History size={16} /> Timeline Clínica (Anti-Leakage)
           </button>
         </nav>
       </div>
@@ -855,70 +722,37 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
           
           {activeTab === 'clinical' && (
               <>
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <Scale size={16} /> Comparativa vs. Baseline (Autocontrol)
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <DeviationCard label="Peso" current={patient.weight.slice(-1)[0]?.value} baseline={patient.baseline.weight} unit="kg" />
-                        <DeviationCard label="Creatinina" current={patient.creatinine.slice(-1)[0]?.value} baseline={patient.baseline.creatinine} unit="mg/dL" />
-                        <DeviationCard label="BNP" current={patient.bnp.slice(-1)[0]?.value} baseline={patient.baseline.bnp} unit="pg/mL" />
-                        <DeviationCard label="eGFR" current={patient.egfr} baseline={90} unit="ml/min" />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <VitalChart title="Creatinina" unit="mg/dL" data={patient.creatinine} color="#f59e0b" />
                     <VitalChart title="Peso Corporal" unit="kg" data={patient.weight} color="#3b82f6" />
                 </div>
               </>
           )}
 
-          {activeTab === 'pharma' && (
-              <div className="space-y-4">
-                  {/* Polypharmacy Alert Widget */}
-                  {isPolypharmacy && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-                          <AlertOctagon className="text-amber-600 shrink-0 mt-0.5" size={20} />
-                          <div>
-                              <h4 className="font-bold text-amber-800 text-sm">Alerta de Polifarmacia ({patient.medications.length} fármacos)</h4>
-                              <p className="text-xs text-amber-700 mt-1">
-                                  El paciente supera el umbral de seguridad de 5 fármacos. Riesgo aumentado de interacciones, caídas y nefrotoxicidad. Se recomienda revisión de cascada de prescripción.
-                              </p>
-                          </div>
-                      </div>
-                  )}
-
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-50 text-slate-500 font-medium">
-                            <tr>
-                                <th className="px-4 py-3 text-left">Droga</th>
-                                <th className="px-4 py-3 text-left">Dosis</th>
-                                <th className="px-4 py-3 text-left">Frecuencia</th>
-                                <th className="px-4 py-3 text-center">Riesgo</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {patient.medications.map(med => (
-                                <tr key={med.id}>
-                                    <td className="px-4 py-3 font-medium text-slate-900">{med.name}</td>
-                                    <td className="px-4 py-3 text-slate-600">{med.dose}</td>
-                                    <td className="px-4 py-3 text-slate-600">{med.frequency}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        {(med.interactionRisk || (med.renalAdjustmentNeeded && patient.egfr < 50)) ? (
-                                            <div className="flex justify-center">
-                                                <AlertTriangle size={16} className="text-amber-500" />
-                                            </div>
-                                        ) : (
-                                            <span className="text-emerald-500 text-xs font-bold">OK</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                  </div>
+          {activeTab === 'timeline' && (
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+                 <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
+                    <CalendarDays size={16} /> Eventos Históricos (Features)
+                 </h3>
+                 <div className="relative border-l-2 border-slate-200 ml-3 space-y-8">
+                    {patient.history.map((event, i) => (
+                        <div key={i} className="relative pl-6">
+                            <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                                <div>
+                                    <span className="text-xs font-bold text-slate-500 uppercase">{event.date}</span>
+                                    <h4 className="text-sm font-bold text-slate-800 mt-1">{event.type}</h4>
+                                    <p className="text-sm text-slate-600 mt-1">{event.description}</p>
+                                </div>
+                                {event.value && (
+                                    <span className="mt-2 sm:mt-0 px-2 py-1 bg-slate-100 rounded text-xs font-mono text-slate-700 border border-slate-200">
+                                        {event.value}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                 </div>
               </div>
           )}
         </div>
@@ -988,11 +822,8 @@ const App = () => {
   };
 
   const handleAddPatient = (data: any) => {
-      // In a real app, this would post to an API
       console.log("Adding patient:", data);
       setIsAddPatientOpen(false);
-      // For demo purposes, we could add to MOCK_PATIENTS if we made it stateful, 
-      // but keeping it simple for now as per "Mock" requirement.
       alert("Paciente agregado exitosamente (Simulación)");
   };
 
@@ -1005,49 +836,49 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setSelectedPatient(null); setActiveModule('dashboard'); }}>
-            <div className="bg-blue-600 p-1.5 rounded text-white">
-                <HeartPulse size={20} />
-            </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+      <ModelValidationHeader /> {/* Always visible in App View */}
+      
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setSelectedPatient(null); setActiveModule('dashboard'); }}>
+            <BrandLogo size="sm" />
+            <span className="text-xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
                 Abk Clinical
             </span>
           </div>
           
           {/* Main Navigation Tabs */}
-          <div className="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-lg">
+          <div className="hidden md:flex items-center space-x-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
              <button 
                 onClick={() => { setActiveModule('dashboard'); setSelectedPatient(null); }}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeModule === 'dashboard' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeModule === 'dashboard' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
              >
                 <LayoutDashboard size={16} /> Panel Poblacional
              </button>
              <button 
                 onClick={() => { setActiveModule('abk_info'); setSelectedPatient(null); }}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeModule === 'abk_info' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeModule === 'abk_info' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
              >
                 <Cpu size={16} /> Inteligencia Clínica
              </button>
           </div>
 
           <div className="flex items-center gap-4">
-             <div className={`hidden md:flex items-center gap-2 text-sm text-slate-500 px-3 py-1.5 rounded-full ${userRole === 'doctor' ? 'bg-blue-50 border border-blue-100' : 'bg-indigo-50 border border-indigo-100'}`}>
-                {userRole === 'doctor' ? <Stethoscope size={14} className="text-blue-600" /> : <Building2 size={14} className="text-indigo-600" />}
-                <span className="font-medium text-slate-700">
-                    {userRole === 'doctor' ? `Dr. Matrícula ${userId}` : `Consultor ID: ${userId}`}
+             <div className={`hidden md:flex items-center gap-2 text-sm text-slate-500 px-4 py-2 rounded-full border ${userRole === 'doctor' ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-indigo-50 border-indigo-100 text-indigo-700'}`}>
+                {userRole === 'doctor' ? <Stethoscope size={14} /> : <Building2 size={14} />}
+                <span className="font-bold">
+                    {userRole === 'doctor' ? `Dr. ${userId}` : `ID: ${userId}`}
                 </span>
              </div>
-             <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-700 font-medium">
-                 Salir
+             <button onClick={handleLogout} className="text-xs text-slate-400 hover:text-red-500 font-bold transition-colors">
+                 Cerrar Sesión
              </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-4rem)]">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-6rem)]">
         {activeModule === 'dashboard' ? (
              selectedPatient ? (
                 <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
