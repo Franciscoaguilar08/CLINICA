@@ -19,6 +19,50 @@ import {
     Pill, DatabaseZap, LogOut, Beaker
 } from 'lucide-react';
 
+// --- Risk Trend Chart Component ---
+const RiskTrendChart = ({ data }: { data: any[] }) => {
+    if (!data || data.length === 0) return (
+        <div className="h-[200px] flex items-center justify-center text-slate-400 text-sm italic border-2 border-dashed border-slate-100 rounded-xl">
+            Sin historial predictivo guardado
+        </div>
+    );
+
+    const chartData = data.map(d => ({
+        date: new Date(d.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit' }),
+        risk: parseFloat(d.score)
+    }));
+
+    return (
+        <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                    <defs>
+                        <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+                    <YAxis domain={[0, 100]} fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+                    <RechartsTooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey="risk"
+                        stroke="#ef4444"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorRisk)"
+                        animationDuration={1500}
+                    />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
 // --- Helpers ---
 const TrendIcon = ({ trend }: { trend: RiskTrend }) => {
     switch (trend) {
@@ -651,6 +695,7 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
     const [activeTab, setActiveTab] = useState<'clinical' | 'timeline'>('clinical');
     const [history, setHistory] = useState<ClinicalEvent[]>([]);
     const [measurements, setMeasurements] = useState<any[]>([]);
+    const [riskHistory, setRiskHistory] = useState<any[]>([]);
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
     const [isAddMeasurementOpen, setIsAddMeasurementOpen] = useState(false);
     const [loadingEvents, setLoadingEvents] = useState(true);
@@ -683,18 +728,44 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
         }
     };
 
+    const fetchRiskHistory = async () => {
+        try {
+            const res = await api.get(`/risks/${patient.id}`);
+            setRiskHistory(res.data);
+        } catch (err) {
+            console.error("Error fetching risk history:", err);
+        }
+    };
+
     useEffect(() => {
         fetchHistory();
         fetchMeasurements();
+        fetchRiskHistory();
     }, [patient.id]);
 
     const handleRunAnalysis = async () => {
         setIsAnalyzing(true);
-        // Enviar el paciente con la historia REAL y MEDICIONES reales
-        const enrichedPatient = { ...patient, history, measurements };
-        const result = await analyzePatientRisk(enrichedPatient);
-        setAiAnalysisData(result);
-        setIsAnalyzing(false);
+        try {
+            const enrichedPatient = { ...patient, history, measurements };
+            const result = await analyzePatientRisk(enrichedPatient);
+            setAiAnalysisData(result);
+
+            // Persistir el resultado automáticamente
+            await api.post('/risks', {
+                patient_id: patient.id,
+                score: result.riskScore,
+                category: result.riskLevel,
+                summary: result.executiveSummary,
+                drivers: result.riskFactors
+            });
+
+            // Recargar historial para ver el nuevo punto en el gráfico
+            fetchRiskHistory();
+        } catch (err) {
+            console.error("Analysis or Save failed:", err);
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const getVitalsForChart = (type: string) => {
@@ -766,20 +837,32 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     {activeTab === 'clinical' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <VitalChart
-                                title="Creatinina"
-                                unit="mg/dL"
-                                data={getVitalsForChart('creatinine').length > 0 ? getVitalsForChart('creatinine') : patient.creatinine}
-                                color="#f59e0b"
-                            />
-                            <VitalChart
-                                title="Peso Corporal"
-                                unit="kg"
-                                data={getVitalsForChart('weight').length > 0 ? getVitalsForChart('weight') : patient.weight}
-                                color="#3b82f6"
-                            />
-                        </div>
+                        <>
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 overflow-hidden relative">
+                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    <TrendingUp size={80} />
+                                </div>
+                                <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
+                                    <History size={16} /> Evolución del Riesgo (Predicción Longitudinal)
+                                </h3>
+                                <RiskTrendChart data={riskHistory} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <VitalChart
+                                    title="Creatinina"
+                                    unit="mg/dL"
+                                    data={getVitalsForChart('creatinine').length > 0 ? getVitalsForChart('creatinine') : patient.creatinine}
+                                    color="#f59e0b"
+                                />
+                                <VitalChart
+                                    title="Peso Corporal"
+                                    unit="kg"
+                                    data={getVitalsForChart('weight').length > 0 ? getVitalsForChart('weight') : patient.weight}
+                                    color="#3b82f6"
+                                />
+                            </div>
+                        </>
                     )}
                     {activeTab === 'timeline' && (
                         <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
