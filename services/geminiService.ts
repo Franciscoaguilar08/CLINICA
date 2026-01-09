@@ -85,10 +85,13 @@ export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
     - eGFR Actual: ${patient.egfr || 'No disponible'}
     - Último Contacto: ${patient.lastEncounter}
     - Medicación: ${patient.medications?.map(m => `${m.name} (${m.dose})`).join(', ') || 'Sin datos'}
-    - Timeline Histórica: ${JSON.stringify(patient.history)}
+    - Timeline Histórica (Eventos): ${JSON.stringify(patient.history)}
+    - Mediciones Clínicas Recientes (LABS/PESO): ${JSON.stringify((patient as any).measurements || [])}
 
     TU TAREA (NIVEL 1 & 2):
-    1. NIVEL 1 (XAI): Explica la probabilidad de internación en 30 días basándote EXCLUSIVAMENTE en los datos provistos. 
+    1. NIVEL 1 (XAI): Explica la probabilidad de internación en 30 días basándote EXCLUSIVAMENTE en los datos provistos.
+       - ANALIZA TENDENCIAS: Si el peso ha subido >2kg en menos de 1 semana, menciónalo como signo de congestión (Riesgo de IC).
+       - Si la Creatinina está subiendo, destaca el riesgo de injuria renal aguda.
        - Si eGFR < 60, menciona riesgo renal.
        - Si hay internaciones recientes, destaca el efecto de re-ingreso.
     2. NIVEL 2 (ANTI-LEAKAGE): Si la última fecha de contacto ('lastEncounter') fue hace más de 120 días, genera una alerta CRÍTICA de "Pérdida de Seguimiento".

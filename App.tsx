@@ -8,6 +8,7 @@ import { VitalChart } from './components/VitalChart';
 import { AbkInfo } from './components/AbkInfo';
 import { AddPatientModal } from './components/AddPatientModal';
 import { AddEventModal } from './components/AddEventModal';
+import { AddMeasurementModal } from './components/AddMeasurementModal';
 import { analyzePatientRisk } from './services/geminiService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import {
@@ -15,7 +16,7 @@ import {
     DollarSign, HeartPulse, Scale, Stethoscope, Building2, CheckCircle2, ArrowRight,
     Lock, AlertOctagon, User, TrendingUp, TrendingDown, Minus, Database, ShieldCheck,
     LayoutDashboard, Cpu, Plus, Library, GraduationCap, CalendarDays, History, Shield,
-    Pill, DatabaseZap, LogOut
+    Pill, DatabaseZap, LogOut, Beaker
 } from 'lucide-react';
 
 // --- Helpers ---
@@ -649,14 +650,15 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [activeTab, setActiveTab] = useState<'clinical' | 'timeline'>('clinical');
     const [history, setHistory] = useState<ClinicalEvent[]>([]);
+    const [measurements, setMeasurements] = useState<any[]>([]);
     const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [isAddMeasurementOpen, setIsAddMeasurementOpen] = useState(false);
     const [loadingEvents, setLoadingEvents] = useState(true);
 
     const fetchHistory = async () => {
         setLoadingEvents(true);
         try {
             const res = await api.get(`/events/${patient.id}`);
-            // Adaptar datos del backend al formato del frontend
             const adaptedEvents = res.data.map((e: any) => ({
                 id: e.id,
                 date: new Date(e.date).toLocaleDateString(),
@@ -672,17 +674,36 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
         }
     };
 
+    const fetchMeasurements = async () => {
+        try {
+            const res = await api.get(`/measurements/${patient.id}`);
+            setMeasurements(res.data);
+        } catch (err) {
+            console.error("Error fetching measurements:", err);
+        }
+    };
+
     useEffect(() => {
         fetchHistory();
+        fetchMeasurements();
     }, [patient.id]);
 
     const handleRunAnalysis = async () => {
         setIsAnalyzing(true);
-        // Enviar el paciente con la historia REAL actualizada
-        const enrichedPatient = { ...patient, history };
+        // Enviar el paciente con la historia REAL y MEDICIONES reales
+        const enrichedPatient = { ...patient, history, measurements };
         const result = await analyzePatientRisk(enrichedPatient);
         setAiAnalysisData(result);
         setIsAnalyzing(false);
+    };
+
+    const getVitalsForChart = (type: string) => {
+        const filtered = measurements.filter(m => m.type === type);
+        if (filtered.length === 0) return [];
+        return filtered.map(m => ({
+            date: new Date(m.date).toLocaleDateString([], { day: '2-digit', month: '2-digit' }),
+            value: parseFloat(m.value)
+        }));
     };
 
     return (
@@ -691,12 +712,20 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                 <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors flex items-center gap-1">
                     <ChevronLeft size={16} /> Volver al Tablero
                 </button>
-                <button
-                    onClick={() => setIsAddEventOpen(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-                >
-                    <Plus size={18} /> Registrar Hito Clínico
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setIsAddMeasurementOpen(true)}
+                        className="bg-white text-blue-600 border border-blue-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-50 transition-all shadow-sm"
+                    >
+                        <Beaker size={18} /> Cargar Lab/Peso
+                    </button>
+                    <button
+                        onClick={() => setIsAddEventOpen(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                    >
+                        <Plus size={18} /> Registrar Hito Clínico
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -738,8 +767,18 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                 <div className="lg:col-span-2 space-y-6">
                     {activeTab === 'clinical' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <VitalChart title="Creatinina" unit="mg/dL" data={patient.creatinine} color="#f59e0b" />
-                            <VitalChart title="Peso Corporal" unit="kg" data={patient.weight} color="#3b82f6" />
+                            <VitalChart
+                                title="Creatinina"
+                                unit="mg/dL"
+                                data={getVitalsForChart('creatinine').length > 0 ? getVitalsForChart('creatinine') : patient.creatinine}
+                                color="#f59e0b"
+                            />
+                            <VitalChart
+                                title="Peso Corporal"
+                                unit="kg"
+                                data={getVitalsForChart('weight').length > 0 ? getVitalsForChart('weight') : patient.weight}
+                                color="#3b82f6"
+                            />
                         </div>
                     )}
                     {activeTab === 'timeline' && (
@@ -808,6 +847,14 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                     patientId={patient.id}
                     onClose={() => setIsAddEventOpen(false)}
                     onSave={fetchHistory}
+                />
+            )}
+
+            {isAddMeasurementOpen && (
+                <AddMeasurementModal
+                    patientId={patient.id}
+                    onClose={() => setIsAddMeasurementOpen(false)}
+                    onSave={fetchMeasurements}
                 />
             )}
         </div>
