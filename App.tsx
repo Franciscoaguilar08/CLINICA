@@ -326,12 +326,36 @@ const AIAnalysisView = ({ data }: { data: any }) => {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Clinical Alerts Section (Level 2) - Anti-Leakage */}
+            {data.clinicalAlerts?.length > 0 && (
+                <div className="space-y-2">
+                    {data.clinicalAlerts.map((alert: any, idx: number) => (
+                        <div key={idx} className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${alert.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
+                                alert.severity === 'WARNING' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                    'bg-blue-50 border-blue-200 text-blue-700'
+                            }`}>
+                            <div className={`p-2 rounded-lg ${alert.severity === 'CRITICAL' ? 'bg-red-100' :
+                                    alert.severity === 'WARNING' ? 'bg-amber-100' :
+                                        'bg-blue-100'
+                                }`}>
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1 opacity-70">
+                                    {alert.type} • {alert.severity}
+                                </div>
+                                <div className="text-sm font-bold">{alert.message}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
                     <div className="absolute -right-10 -top-10 bg-white/10 w-40 h-40 rounded-full blur-3xl"></div>
                     <div className="relative z-10">
                         <h3 className="text-sm font-bold uppercase tracking-wider opacity-80 mb-2 flex items-center gap-2">
-                            <BrainCircuit size={16} /> Resumen Ejecutivo
+                            <BrainCircuit size={16} /> Resumen Ejecutivo (XAI)
                         </h3>
                         <p className="text-lg leading-relaxed font-medium">
                             {data.executiveSummary}
@@ -391,7 +415,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                             <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <span className="font-bold text-sm text-slate-800">{factor.factor}</span>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${factor.impact === 'ALTO' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${factor.impact === 'NEGATIVO' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                         {factor.impact}
                                     </span>
                                 </div>
@@ -402,39 +426,31 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-blue-100 p-6 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Library size={18} className="text-blue-600" /> Fundamentación Teórica (Guías AR)
+            {/* Level 2: Medication Safety Section */}
+            {data.medicationSafety?.length > 0 && (
+                <div className="bg-white rounded-xl border border-red-100 p-6 shadow-sm">
+                    <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2">
+                        <Pill size={18} /> Seguridad Farmacológica & Ajustes
                     </h3>
-                    <ul className="space-y-2">
-                        {data.argentinaGuidelines?.map((guide: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
-                                <div className="mt-0.5 min-w-[4px] h-4 bg-blue-500 rounded-full"></div>
-                                {guide}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <GraduationCap size={18} className="text-emerald-600" /> Evidencia Científica (Papers)
-                    </h3>
-                    <div className="space-y-3">
-                        {data.scientificPapers?.map((paper: any, idx: number) => (
-                            <div key={idx} className="flex flex-col gap-1 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                                <a href="#" className="font-bold text-sm text-slate-800 hover:text-blue-600 transition-colors line-clamp-1">
-                                    {paper.title}
-                                </a>
-                                <div className="flex justify-between items-center text-xs text-slate-400">
-                                    <span>{paper.source} ({paper.year})</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {data.medicationSafety.map((item: any, idx: number) => (
+                            <div key={idx} className="bg-red-50/30 p-4 rounded-xl border border-red-50 relative overflow-hidden group hover:bg-red-50 transition-colors">
+                                <div className="absolute right-2 top-2 text-red-100 group-hover:text-red-200 transition-colors">
+                                    <Pill size={40} />
                                 </div>
-                                <p className="text-xs text-slate-500 italic mt-1 font-medium">"{paper.relevance}"</p>
+                                <div className="relative z-10">
+                                    <div className="font-bold text-slate-900 text-sm mb-1">{item.drug}</div>
+                                    <div className="text-[10px] text-red-600 font-extrabold mb-2 uppercase tracking-tight flex items-center gap-1">
+                                        <div className="w-1 h-1 bg-red-600 rounded-full"></div>
+                                        {item.issue}
+                                    </div>
+                                    <p className="text-xs text-slate-600 font-medium leading-relaxed italic">"{item.recommendation}"</p>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

@@ -1,120 +1,116 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Patient } from "../types";
 
-// NOTE: This assumes process.env.API_KEY is available.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// NOTE: Using the standard @google/generative-ai package
+const ai = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
 
-// Definición del Schema para respuesta estructurada
-const riskAnalysisSchema = {
-  type: Type.OBJECT,
+// Definición del Schema para respuesta estructurada (JSON Mode)
+const riskAnalysisSchema: any = {
+  type: SchemaType.OBJECT,
   properties: {
-    executiveSummary: { type: Type.STRING, description: "Resumen clínico ejecutivo centrado en el evento a predecir." },
-    riskScore: { type: Type.INTEGER, description: "Probabilidad (0-100) del evento target (ej: Internación < 30 días)." },
-    riskLevel: { type: Type.STRING, description: "Nivel de riesgo textual (BAJO, MEDIO, ALTO, CRÍTICO)." },
-    
-    // Fundamentación Teórica
-    argentinaGuidelines: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Guías GPC MinSalud/SAC aplicables."
-    },
-    scientificPapers: {
-      type: Type.ARRAY,
+    executiveSummary: { type: SchemaType.STRING, description: "Resumen clínico ejecutivo centrado en el porqué del riesgo." },
+    riskScore: { type: SchemaType.NUMBER, description: "Probabilidad (0-100) de internación en 30 días." },
+    riskLevel: { type: SchemaType.STRING, description: "Nivel (BAJO, MEDIO, ALTO, CRÍTICO)." },
+
+    // Nivel 2: Clinical Support Alerts
+    clinicalAlerts: {
+      type: SchemaType.ARRAY,
       items: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-          title: { type: Type.STRING },
-          source: { type: Type.STRING },
-          year: { type: Type.STRING },
-          relevance: { type: Type.STRING }
+          type: { type: SchemaType.STRING, description: "ANTI_LEAKAGE, SAFETY, CLINICAL" },
+          severity: { type: SchemaType.STRING, description: "CRITICAL, WARNING, INFO" },
+          message: { type: SchemaType.STRING }
         }
       }
     },
 
-    // Factores de Riesgo (SHAP visualization data)
+    medicationSafety: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          drug: { type: SchemaType.STRING },
+          issue: { type: SchemaType.STRING, description: "Interacción, ajuste renal, etc." },
+          recommendation: { type: SchemaType.STRING }
+        }
+      }
+    },
+
+    // Representación de Drivers (SHAP)
     riskFactors: {
-      type: Type.ARRAY,
+      type: SchemaType.ARRAY,
       items: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-          factor: { type: Type.STRING },
-          impact: { type: Type.STRING, description: "ALTO, MEDIO, BAJO" },
-          description: { type: Type.STRING, description: "Explicación causal (Feature Importance)." }
+          factor: { type: SchemaType.STRING },
+          impact: { type: SchemaType.STRING, description: "POSITIVO, NEGATIVO" },
+          description: { type: SchemaType.STRING }
         }
       }
     },
 
-    // Datos para Gráfico de Proyección (Risk Trajectory)
     riskProjection: {
-      type: Type.ARRAY,
+      type: SchemaType.ARRAY,
       items: {
-        type: Type.OBJECT,
+        type: SchemaType.OBJECT,
         properties: {
-          month: { type: Type.STRING, description: "Mes 1, Mes 2, etc." },
-          riskUntreated: { type: Type.INTEGER, description: "Riesgo si NO se actúa." },
-          riskTreated: { type: Type.INTEGER, description: "Riesgo proyectado post-intervención." }
+          month: { type: SchemaType.STRING },
+          riskUntreated: { type: SchemaType.NUMBER },
+          riskTreated: { type: SchemaType.NUMBER }
         }
       }
     },
 
-    suggestedAction: { type: Type.STRING, description: "Acción para mitigar el riesgo predicho." }
+    suggestedAction: { type: SchemaType.STRING, description: "Próximo paso clínico concreto." }
   },
-  required: ["executiveSummary", "argentinaGuidelines", "scientificPapers", "riskFactors", "riskProjection", "suggestedAction"]
+  required: ["executiveSummary", "riskScore", "riskLevel", "clinicalAlerts", "riskFactors", "riskProjection"]
 };
 
-/**
- * Acts as the "Risk Engine & Explainability Layer".
- * Returns structured JSON for rich UI rendering.
- */
 export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
-  const model = "gemini-3-pro-preview";
-  
+  const model = ai.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: riskAnalysisSchema,
+    }
+  });
+
   const prompt = `
-    Actúa como un MODELO PREDICTIVO CLÍNICO (XGBoost/LightGBM) interpretado por un Sistema Experto.
+    Actúa como un Sistema de Soporte a Decisiones Clínicas (CDSS) de Nivel 2.
     
-    OBJETIVO DE PREDICCIÓN (LABEL): **HOSPITALIZATION_30D** (Probabilidad de internación o muerte en próximos 30 días).
-
-    REGLAS DE ORO (ANTI-DATA LEAKAGE):
-    1. Solo puedes usar datos HISTÓRICOS provistos en 'history', 'medications', 'labs'.
-    2. No inventes eventos futuros.
-    3. Si el paciente no tiene eventos recientes (>6 meses), el riesgo aumenta drásticamente por "Pérdida de Seguimiento".
-
-    CONTEXTO DEL PACIENTE (FEATURES):
-    - ID: ${patient.id} | Edad: ${patient.age}
+    CONTEXTO (FEATURES):
+    - Edad: ${patient.age} | Género: ${patient.gender}
     - Comorbilidades: ${patient.conditions.join(', ')}
-    - Eventos (Timeline): ${JSON.stringify(patient.history)}
-    - Medicación Activa: ${patient.medications.map(m => m.name).join(', ')}
-    - eGFR: ${patient.egfr}
-    - Último contacto: ${patient.lastEncounter}
+    - eGFR Actual: ${patient.egfr || 'No disponible'}
+    - Último Contacto: ${patient.lastEncounter}
+    - Medicación: ${patient.medications?.map(m => `${m.name} (${m.dose})`).join(', ') || 'Sin datos'}
+    - Timeline Histórica: ${JSON.stringify(patient.history)}
 
-    TAREA:
-    Genera un JSON explicando por qué el modelo predice el Score actual.
-    
-    1. **SHAP Values (riskFactors)**: Identifica qué variables empujan el score hacia arriba. Ej: "Internación hace 20 días" (Feature temporal fuerte), "Polifarmacia > 8" (Feature estructural).
-    2. **Validación Local**: Cita guías argentinas (MinSalud, SAC) que justifiquen por qué esas variables son riesgosas.
-    3. **Proyección**: Simula la curva de riesgo a 6 meses.
+    TU TAREA (NIVEL 1 & 2):
+    1. NIVEL 1 (XAI): Explica la probabilidad de internación en 30 días basándote EXCLUSIVAMENTE en los datos provistos. 
+       - Si eGFR < 60, menciona riesgo renal.
+       - Si hay internaciones recientes, destaca el efecto de re-ingreso.
+    2. NIVEL 2 (ANTI-LEAKAGE): Si la última fecha de contacto ('lastEncounter') fue hace más de 120 días, genera una alerta CRÍTICA de "Pérdida de Seguimiento".
+    3. NIVEL 2 (SEGURIDAD): Revisa si hay polifarmacia (>5 fármacos) o fármacos que requieran ajuste renal dado el eGFR.
+
+    IMPORTANTE: No inventes diagnósticos que no estén en la lista. Si faltan datos, marca 'DATA_MISSING' en las alertas.
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: riskAnalysisSchema,
-        thinkingConfig: { thinkingBudget: 16000 }, 
-      }
-    });
-
-    const jsonText = response.text || "{}";
-    return JSON.parse(jsonText);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return JSON.parse(response.text());
   } catch (error) {
-    console.error("Error analyzing patient risk:", error);
-    return null;
+    console.error("AI Analysis failed:", error);
+    // Fallback simple para evitar que la UI rompa
+    return {
+      executiveSummary: "Error analizando datos. Por favor reintente.",
+      riskScore: 0,
+      riskLevel: "ERROR",
+      clinicalAlerts: [],
+      riskFactors: [],
+      riskProjection: []
+    };
   }
-};
-
-export const searchClinicalGuidelines = async (query: string): Promise<{ text: string; sources: any[] }> => {
-  return { text: "", sources: [] };
 };
