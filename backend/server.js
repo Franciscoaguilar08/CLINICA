@@ -18,9 +18,11 @@ app.get('/health', (req, res) => {
 // Rutas
 import authRoutes from './routes/auth.js';
 import patientsRouter from './routes/patients.js';
+import eventsRouter from './routes/events.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientsRouter);
+app.use('/api/events', eventsRouter);
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

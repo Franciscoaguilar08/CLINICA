@@ -3,14 +3,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import api from './src/services/api';
 import { MOCK_PATIENTS, OUTCOMES_DATA, MODEL_METRICS } from './constants';
-import { Patient, RiskLevel, RiskTrend, CareGap } from './types';
+import { Patient, RiskLevel, RiskTrend, CareGap, ClinicalEvent } from './types';
 import { VitalChart } from './components/VitalChart';
 import { AbkInfo } from './components/AbkInfo';
 import { AddPatientModal } from './components/AddPatientModal';
+import { AddEventModal } from './components/AddEventModal';
 import { analyzePatientRisk } from './services/geminiService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import {
-    Activity, AlertTriangle, BrainCircuit, ChevronRight, Ghost, Clock, BarChart3,
+    Activity, AlertTriangle, BrainCircuit, ChevronRight, ChevronLeft, Ghost, Clock, BarChart3,
     DollarSign, HeartPulse, Scale, Stethoscope, Building2, CheckCircle2, ArrowRight,
     Lock, AlertOctagon, User, TrendingUp, TrendingDown, Minus, Database, ShieldCheck,
     LayoutDashboard, Cpu, Plus, Library, GraduationCap, CalendarDays, History, Shield,
@@ -331,12 +332,12 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                 <div className="space-y-2">
                     {data.clinicalAlerts.map((alert: any, idx: number) => (
                         <div key={idx} className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${alert.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
-                                alert.severity === 'WARNING' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                    'bg-blue-50 border-blue-200 text-blue-700'
+                            alert.severity === 'WARNING' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                'bg-blue-50 border-blue-200 text-blue-700'
                             }`}>
                             <div className={`p-2 rounded-lg ${alert.severity === 'CRITICAL' ? 'bg-red-100' :
-                                    alert.severity === 'WARNING' ? 'bg-amber-100' :
-                                        'bg-blue-100'
+                                alert.severity === 'WARNING' ? 'bg-amber-100' :
+                                    'bg-blue-100'
                                 }`}>
                                 <AlertTriangle size={20} />
                             </div>
@@ -456,7 +457,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
 };
 
 // --- Clinical Command Center (Dashboard) ---
-const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void }) => {
+const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void, key?: any }) => {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -647,19 +648,54 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
     const [aiAnalysisData, setAiAnalysisData] = useState<any | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [activeTab, setActiveTab] = useState<'clinical' | 'timeline'>('clinical');
+    const [history, setHistory] = useState<ClinicalEvent[]>([]);
+    const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+    const [loadingEvents, setLoadingEvents] = useState(true);
+
+    const fetchHistory = async () => {
+        setLoadingEvents(true);
+        try {
+            const res = await api.get(`/events/${patient.id}`);
+            // Adaptar datos del backend al formato del frontend
+            const adaptedEvents = res.data.map((e: any) => ({
+                id: e.id,
+                date: new Date(e.date).toLocaleDateString(),
+                type: e.type.charAt(0).toUpperCase() + e.type.slice(1),
+                description: e.notes || 'Sin descripción adicional'
+            }));
+            setHistory(adaptedEvents);
+        } catch (err) {
+            console.error("Error fetching patient history:", err);
+            setHistory([]);
+        } finally {
+            setLoadingEvents(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, [patient.id]);
 
     const handleRunAnalysis = async () => {
         setIsAnalyzing(true);
-        const result = await analyzePatientRisk(patient);
+        // Enviar el paciente con la historia REAL actualizada
+        const enrichedPatient = { ...patient, history };
+        const result = await analyzePatientRisk(enrichedPatient);
         setAiAnalysisData(result);
         setIsAnalyzing(false);
     };
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-2">
-                <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors">
-                    &larr; Volver al Tablero
+            <div className="flex justify-between items-center mb-2">
+                <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors flex items-center gap-1">
+                    <ChevronLeft size={16} /> Volver al Tablero
+                </button>
+                <button
+                    onClick={() => setIsAddEventOpen(true)}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                >
+                    <Plus size={18} /> Registrar Hito Clínico
                 </button>
             </div>
 
@@ -712,19 +748,22 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                                 <CalendarDays size={16} /> Eventos Históricos (Features)
                             </h3>
                             <div className="relative border-l-2 border-slate-200 ml-3 space-y-8">
-                                {patient.history.length > 0 ? patient.history.map((event, i) => (
-                                    <div key={i} className="relative pl-6 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${i * 100}ms` }}>
-                                        <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
-                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-                                            <div>
-                                                <span className="text-xs font-bold text-slate-500 uppercase">{event.date}</span>
-                                                <h4 className="text-sm font-bold text-slate-800 mt-1">{event.type}</h4>
-                                                <p className="text-sm text-slate-600 mt-1">{event.description}</p>
+                                {loadingEvents ? (
+                                    <div className="text-center py-12 text-slate-400">Cargando eventos...</div>
+                                ) : history.length > 0 ? (
+                                    history.map((event, i) => (
+                                        <div key={i} className="relative pl-6 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${i * 100}ms` }}>
+                                            <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">{event.date}</span>
+                                                    <h4 className="text-sm font-bold text-slate-800 mt-1">{event.type}</h4>
+                                                    <p className="text-sm text-slate-600 mt-1">{event.description}</p>
+                                                </div>
                                             </div>
-                                            {event.value && <span className="mt-2 sm:mt-0 px-2 py-1 bg-slate-100 rounded text-xs font-mono text-slate-700 border border-slate-200">{event.value}</span>}
                                         </div>
-                                    </div>
-                                )) : (
+                                    ))
+                                ) : (
                                     <div className="text-center py-12 text-slate-400">
                                         No hay eventos registrados en la historia clínica.
                                     </div>
@@ -763,6 +802,14 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                     <AIAnalysisView data={aiAnalysisData} />
                 </div>
             </div>
+
+            {isAddEventOpen && (
+                <AddEventModal
+                    patientId={patient.id}
+                    onClose={() => setIsAddEventOpen(false)}
+                    onSave={fetchHistory}
+                />
+            )}
         </div>
     );
 };

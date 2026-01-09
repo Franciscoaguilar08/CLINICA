@@ -1,8 +1,12 @@
 import express from 'express';
+import { getEventsByPatient, createEvent } from '../controllers/eventController.js';
+import { authenticateToken } from '../middleware/auth.js';
+
 const router = express.Router();
 
-router.get('/:patient_id', (req, res) => {
-    res.json({ message: "Eventos del paciente " + req.params.patient_id });
-});
+router.use(authenticateToken);
+
+router.get('/:patientId', getEventsByPatient);
+router.post('/', createEvent);
 
 export default router;
