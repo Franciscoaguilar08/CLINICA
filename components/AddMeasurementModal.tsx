@@ -33,11 +33,18 @@ export const AddMeasurementModal: React.FC<AddMeasurementModalProps> = ({ patien
             hba1c: '%'
         };
 
+        const val = parseFloat(formData.value);
+        if (isNaN(val)) {
+            setError('Por favor ingrese un valor numérico válido.');
+            setLoading(false);
+            return;
+        }
+
         try {
             await api.post('/measurements', {
                 patient_id: patientId,
                 type: formData.type,
-                value: parseFloat(formData.value),
+                value: val,
                 unit: units[formData.type],
                 date: formData.date
             });
@@ -45,7 +52,8 @@ export const AddMeasurementModal: React.FC<AddMeasurementModalProps> = ({ patien
             onClose();
         } catch (err: any) {
             console.error("Error creating measurement:", err);
-            setError('Error al registrar la medición. Verifique el valor numérico.');
+            const msg = err.response?.data?.error || 'Error al registrar la medición.';
+            setError(`${msg} Verifique el valor y la conexión.`);
         } finally {
             setLoading(false);
         }

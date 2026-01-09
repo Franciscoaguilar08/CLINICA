@@ -25,9 +25,11 @@ export const getMeasurementsByPatient = async (req, res) => {
 
 export const createMeasurement = async (req, res) => {
     try {
+        console.log("Registrando medición:", req.body);
         const { patient_id, type, value, unit, date } = req.body;
 
         if (!patient_id || !type || value === undefined) {
+            console.error("Faltan datos:", { patient_id, type, value });
             return res.status(400).json({ error: "Faltan datos requeridos (Paciente, Tipo o Valor)" });
         }
 
