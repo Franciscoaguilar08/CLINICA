@@ -757,6 +757,7 @@ const MainLayout = () => {
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
     const [activeModule, setActiveModule] = useState<'dashboard' | 'abk_info'>('dashboard');
+    const [refreshKey, setRefreshKey] = useState(0);
 
     if (!isAuthenticated) return <Navigate to="/login" />;
 
@@ -803,7 +804,7 @@ const MainLayout = () => {
                     selectedPatient ? (
                         <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
                     ) : (
-                        <Dashboard onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} />
+                        <Dashboard key={refreshKey} onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} />
                     )
                 ) : (
                     <AbkInfo />
@@ -811,7 +812,7 @@ const MainLayout = () => {
             </main>
 
             {isAddPatientOpen && (
-                <AddPatientModal onClose={() => setIsAddPatientOpen(false)} onSave={() => setIsAddPatientOpen(false)} />
+                <AddPatientModal onClose={() => setIsAddPatientOpen(false)} onSave={() => { setIsAddPatientOpen(false); setRefreshKey(prev => prev + 1); }} />
             )}
         </div>
     );
