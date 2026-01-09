@@ -4,7 +4,7 @@ import { query } from '../database/db.js';
 export const getPatients = async (req, res) => {
     try {
         // req.user viene del middleware de auth (ya sabemos quién es)
-        const result = await query('SELECT * FROM patients ORDER BY created_at DESC');
+        const result = await query('SELECT * FROM patients ORDER BY admission_date DESC');
         res.json(result.rows);
     } catch (error) {
         console.error("Error al obtener pacientes:", error);
@@ -15,7 +15,7 @@ export const getPatients = async (req, res) => {
 // Crear un nuevo paciente
 export const createPatient = async (req, res) => {
     try {
-        const { first_name, last_name, age, gender, system_type } = req.body;
+        const { first_name, last_name, age, gender, insurance, primary_condition, system_type, social_vulnerability, social_factors } = req.body;
         const userId = req.user.id; // El médico que lo crea
 
         // Validación básica
@@ -24,11 +24,22 @@ export const createPatient = async (req, res) => {
         }
 
         const text = `
-      INSERT INTO patients (first_name, last_name, age, gender, system_type, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO patients (first_name, last_name, age, gender, insurance, primary_condition, system_type, created_by, social_vulnerability, social_factors)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
-        const values = [first_name, last_name, age, gender, system_type, userId];
+        const values = [
+            first_name,
+            last_name,
+            age,
+            gender,
+            insurance,
+            primary_condition,
+            system_type || 'General',
+            userId,
+            social_vulnerability || 1,
+            JSON.stringify(social_factors || [])
+        ];
 
         const result = await query(text, values);
         res.status(201).json(result.rows[0]);

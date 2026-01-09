@@ -12,15 +12,26 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onClose, onSav
   const [formData, setFormData] = useState({
     name: '',
     age: '',
-    gender: 'M',
+    gender: 'Masculino',
     insurance: '',
-    condition: ''
+    condition: '',
+    socialVulnerability: 1,
+    socialFactors: [] as string[]
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSocialFactorToggle = (factor: string) => {
+    setFormData(prev => ({
+      ...prev,
+      socialFactors: prev.socialFactors.includes(factor)
+        ? prev.socialFactors.filter(f => f !== factor)
+        : [...prev.socialFactors, factor]
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +50,10 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onClose, onSav
         last_name,
         age: parseInt(formData.age),
         gender: formData.gender,
-        system_type: formData.condition || 'General'
+        insurance: formData.insurance,
+        primary_condition: formData.condition || 'General',
+        social_vulnerability: parseInt(formData.socialVulnerability.toString()),
+        social_factors: formData.socialFactors
       });
 
       onSave(); // Trigger refresh in parent
@@ -143,6 +157,54 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onClose, onSav
               value={formData.condition}
               onChange={handleChange}
             />
+          </div>
+
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              Entorno Social & SDOH
+            </h4>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Vulnerabilidad Social (1-5)</label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                name="socialVulnerability"
+                value={formData.socialVulnerability}
+                onChange={handleChange}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-1">
+                <span>BAJA</span>
+                <span className="text-blue-600">NIVEL {formData.socialVulnerability}</span>
+                <span>CRÍTICA</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Barreras Detectadas</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'vive_solo', label: 'Vive Solo' },
+                  { id: 'sin_remedios', label: 'Falta Acceso Medicamentos' },
+                  { id: 'sin_transporte', label: 'Sin Transporte' },
+                  { id: 'bajo_ingreso', label: 'Inestabilidad Económica' },
+                ].map(factor => (
+                  <button
+                    key={factor.id}
+                    type="button"
+                    onClick={() => handleSocialFactorToggle(factor.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${formData.socialFactors.includes(factor.id)
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                  >
+                    {factor.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="pt-6 flex gap-3">

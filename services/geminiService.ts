@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Patient } from "../types";
+import { calculateCHA2DS2VASc, calculateMDRD } from "./clinicalCalculators";
 
 // NOTE: Using the standard @google/generative-ai package
 const ai = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
@@ -8,11 +9,30 @@ const ai = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
 const riskAnalysisSchema: any = {
   type: SchemaType.OBJECT,
   properties: {
-    executiveSummary: { type: SchemaType.STRING, description: "Resumen clínico ejecutivo centrado en el porqué del riesgo." },
-    riskScore: { type: SchemaType.NUMBER, description: "Probabilidad (0-100) de internación en 30 días." },
-    riskLevel: { type: SchemaType.STRING, description: "Nivel (BAJO, MEDIO, ALTO, CRÍTICO)." },
+    executiveSummary: { type: SchemaType.STRING, description: "Resumen clínico ejecutivo con respaldo científico." },
 
-    // Nivel 2: Clinical Support Alerts
+    // Perfil Multi-Outcome (Capa 10)
+    predictions: {
+      type: SchemaType.ARRAY,
+      description: "Perfil de riesgo para múltiples outcomes clínicos.",
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          outcome: { type: SchemaType.STRING, description: "HOSPITALIZATION_30D, READMISSION_90D, DRUG_NON_ADHERENCE, ORGAN_FAILURE_PROGRESSION" },
+          probability: { type: SchemaType.NUMBER, description: "0-100" },
+          riskLevel: { type: SchemaType.STRING, description: "BAJO, MEDIO, ALTO, CRÍTICO" },
+          rationale: { type: SchemaType.STRING, description: "Breve explicación de por qué este score." }
+        },
+        required: ["outcome", "probability", "riskLevel"]
+      }
+    },
+
+    // Nivel 3: Respaldos de Guías Clínicas
+    guidelinesCited: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING, description: "Ej: GPC SAC 2020, KDIGO 2023, AHA/ACC" }
+    },
+
     clinicalAlerts: {
       type: SchemaType.ARRAY,
       items: {
@@ -37,7 +57,6 @@ const riskAnalysisSchema: any = {
       }
     },
 
-    // Representación de Drivers (SHAP)
     riskFactors: {
       type: SchemaType.ARRAY,
       items: {
@@ -64,10 +83,10 @@ const riskAnalysisSchema: any = {
 
     suggestedAction: { type: SchemaType.STRING, description: "Próximo paso clínico concreto." }
   },
-  required: ["executiveSummary", "riskScore", "riskLevel", "clinicalAlerts", "riskFactors", "riskProjection"]
+  required: ["executiveSummary", "predictions", "clinicalAlerts", "riskFactors", "guidelinesCited"]
 };
 
-export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
+export const analyzePatientRisk = async (patient: Patient, isSimulation: boolean = false): Promise<any> => {
   const model = ai.getGenerativeModel({
     model: "gemini-1.5-flash",
     generationConfig: {
@@ -76,44 +95,66 @@ export const analyzePatientRisk = async (patient: Patient): Promise<any> => {
     }
   });
 
+  // Cálculos Deterministas (Capa 8: Respaldo Científico)
+  const measurements = (patient as any).measurements || [];
+  const latestCreatinine = measurements.find((m: any) => m.type === 'creatinine')?.value;
+  const mdrdResult = calculateMDRD(patient, latestCreatinine);
+  const cha2ds2vascResult = calculateCHA2DS2VASc(patient, patient.history);
+
   const prompt = `
-    Actúa como un Sistema de Soporte a Decisiones Clínicas (CDSS) de Nivel 2.
+    Actúa como un Sistema de Soporte a Decisiones Clínicas (CDSS) Híbrido Avanzado.
+    ${isSimulation ? 'MODO SIMULACIÓN ACTIVADO: Analiza el impacto de los cambios propuestos en comparación con el estado basal.' : ''}
+
+    EVIDENCIA CLÍNICA DETERMINISTA (CALCULADORES):
+    - Filtrado Glomerular (MDRD): ${mdrdResult.gfr} ml/min/1.73m2 (Estadio: ${mdrdResult.stage}) - ${mdrdResult.note}
+    - Score CHA2DS2-VASc: ${cha2ds2vascResult.score} (Riesgo ACV: ${cha2ds2vascResult.risk}) - Guía SAC/ESC.
     
     CONTEXTO (FEATURES):
     - Edad: ${patient.age} | Género: ${patient.gender}
     - Comorbilidades: ${patient.conditions.join(', ')}
-    - eGFR Actual: ${patient.egfr || 'No disponible'}
-    - Último Contacto: ${patient.lastEncounter}
-    - Medicación: ${patient.medications?.map(m => `${m.name} (${m.dose})`).join(', ') || 'Sin datos'}
-    - Timeline Histórica (Eventos): ${JSON.stringify(patient.history)}
-    - Mediciones Clínicas Recientes (LABS/PESO): ${JSON.stringify((patient as any).measurements || [])}
+    - Patología Principal: ${(patient as any).primary_condition || 'No especificada'}
+    - Vulnerabilidad Social: Nivel ${patient.socialVulnerability || 1}/5
+    - Barreras Sociales (SDOH): ${patient.socialFactors?.join(', ') || 'Ninguna identificada'}
+    - Medicación Actual: ${patient.medications?.map(m => `${m.name} (${m.dose})`).join(', ') || 'Sin datos'}
+    - Timeline Histórica: ${JSON.stringify(patient.history)}
+    - Laboratorios/Mediciones: ${JSON.stringify(measurements)}
 
-    TU TAREA (NIVEL 1 & 2):
-    1. NIVEL 1 (XAI): Explica la probabilidad de internación en 30 días basándote EXCLUSIVAMENTE en los datos provistos.
-       - ANALIZA TENDENCIAS: Si el peso ha subido >2kg en menos de 1 semana, menciónalo como signo de congestión (Riesgo de IC).
-       - Si la Creatinina está subiendo, destaca el riesgo de injuria renal aguda.
-       - Si eGFR < 60, menciona riesgo renal.
-       - Si hay internaciones recientes, destaca el efecto de re-ingreso.
-    2. NIVEL 2 (ANTI-LEAKAGE): Si la última fecha de contacto ('lastEncounter') fue hace más de 120 días, genera una alerta CRÍTICA de "Pérdida de Seguimiento".
-    3. NIVEL 2 (SEGURIDAD): Revisa si hay polifarmacia (>5 fármacos) o fármacos que requieran ajuste renal dado el eGFR.
-
-    IMPORTANTE: No inventes diagnósticos que no estén en la lista. Si faltan datos, marca 'DATA_MISSING' en las alertas.
+    TU TAREA:
+    1. PERFIL DE RIESGO MULTI-OUTCOME: Genera predicciones independientes para:
+       - 'HOSPITALIZATION_30D': Riesgo de ingreso agudo.
+       - 'READMISSION_90D': Riesgo de re-ingreso recurrente a mediano plazo.
+       - 'DRUG_NON_ADHERENCE': Basado en barreras sociales y estabilidad clínica.
+       - 'ORGAN_FAILURE_PROGRESSION': Progresión de ERC o IC (basado en MDRD y tendencias de peso/creatinina).
+    2. VALIDA y CRUZA los datos: Si un calculador clínico indica riesgo ALTO (ej: MDRD < 60), el score de 'ORGAN_FAILURE_PROGRESSION' y 'HOSPITALIZATION_30D' debe ser correlativamente alto.
+    3. DETERMINANTES SOCIALES (SDOH): Si la vulnerabilidad social es >= 4 o hay barreras como 'sin_remedios', el score de 'DRUG_NON_ADHERENCE' y 'READMISSION_90D' debe aumentar significativamente.
+    4. RESPALDO CIENTÍFICO: En el 'executiveSummary' y 'guidelinesCited', menciona siempre la guía de referencia.
+    5. NO ALUCINES: Si no hay evidencia, no la inventes.
+    
+    ${isSimulation ? 'En el resumen, explica ESPECÍFICAMENTE cómo la intervención simulada cambia cada uno de estos outomes.' : ''}
   `;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return JSON.parse(response.text());
+    const data = JSON.parse(response.text());
+
+    // Inyectar los resultados deterministas en la respuesta para la UI
+    return {
+      ...data,
+      clinicalScores: {
+        mdrd: mdrdResult,
+        cha2ds2vasc: cha2ds2vascResult
+      }
+    };
   } catch (error) {
     console.error("AI Analysis failed:", error);
-    // Fallback simple para evitar que la UI rompa
     return {
-      executiveSummary: "Error analizando datos. Por favor reintente.",
+      executiveSummary: "Error analizando datos clínicos.",
       riskScore: 0,
       riskLevel: "ERROR",
       clinicalAlerts: [],
       riskFactors: [],
-      riskProjection: []
+      guidelinesCited: []
     };
   }
 };

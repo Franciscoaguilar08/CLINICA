@@ -14,7 +14,11 @@ CREATE TABLE IF NOT EXISTS patients (
   last_name VARCHAR(100) NOT NULL,
   age INTEGER NOT NULL,
   gender VARCHAR(50),
-  system_type VARCHAR(50) CHECK (system_type IN ('publico', 'privado')),
+  insurance VARCHAR(100), -- Cobertura (PAMI, OSDE, etc)
+  primary_condition VARCHAR(100), -- Patología principal
+  system_type VARCHAR(50), -- Opcional, flexibilizado
+  social_vulnerability INTEGER DEFAULT 1,
+  social_factors JSONB DEFAULT '[]',
   admission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_by INTEGER REFERENCES users(id) -- Quién creó al paciente
 );
@@ -38,6 +42,17 @@ CREATE TABLE IF NOT EXISTS clinical_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Bloque 4: Mediciones Clínicas [NEW]
+CREATE TABLE IF NOT EXISTS clinical_measurements (
+  id SERIAL PRIMARY KEY,
+  patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL, -- peso, creatinina, tension_arterial, etc
+  value DECIMAL(10, 2) NOT NULL,
+  unit VARCHAR(20),
+  date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Bloque 4: Medicación
 CREATE TABLE IF NOT EXISTS medications (
   id SERIAL PRIMARY KEY,
@@ -53,6 +68,8 @@ CREATE TABLE IF NOT EXISTS risk_assessments (
   patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
   score DECIMAL(5, 2),
   category VARCHAR(50) NOT NULL,
-  source VARCHAR(100), -- 'externa'
+  source VARCHAR(100), -- 'REALTIME_AI'
+  summary TEXT,
+  drivers JSONB DEFAULT '[]',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

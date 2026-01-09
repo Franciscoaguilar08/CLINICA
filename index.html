@@ -1,27 +1,84 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Abk Clinical | Gestión Clínica de Crónicos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      /* Custom scrollbar for dense clinical tables */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abk Clinical | Gestión Clínica de Crónicos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for dense clinical tables */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* PRINT OPTIMIZATION (Capa 11) */
+    @media print {
+
+      header,
+      .no-print,
+      button,
+      nav,
+      .sticky {
+        display: none !important;
       }
-      ::-webkit-scrollbar-track {
-        background: #f1f5f9; 
+
+      body {
+        background: white !important;
+        color: black !important;
+        font-size: 10pt;
       }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; 
-        border-radius: 4px;
+
+      .print-only {
+        display: block !important;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8; 
+
+      .container,
+      .main-layout {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
       }
-    </style>
+
+      .bg-white {
+        box-shadow: none !important;
+        border: 1px solid #eee !important;
+      }
+
+      .bg-slate-50,
+      .bg-indigo-50 {
+        background-color: transparent !important;
+      }
+
+      .text-white {
+        color: black !important;
+      }
+
+      .bg-indigo-600,
+      .bg-blue-600 {
+        background-color: #eee !important;
+        color: black !important;
+      }
+    }
+
+    .print-only {
+      display: none;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -35,8 +92,10 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 font-sans antialiased">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="bg-slate-50 text-slate-900 font-sans antialiased">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

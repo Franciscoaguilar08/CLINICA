@@ -72,33 +72,37 @@ export interface Patient {
   name: string;
   age: number;
   gender: string;
-  conditions: string[]; 
-  
+  conditions: string[];
+
   // Stratification & Explainability
   riskLevel: RiskLevel;
   riskScore: number; // Probability 0-100% for the specific Label
   predictionLabel: PredictionLabel; // Qué estamos prediciendo
   riskTrend: RiskTrend;
   riskDrivers: RiskFactor[]; // Ahora usa la interfaz RiskFactor más detallada
-  careGaps: CareGap[]; 
+  careGaps: CareGap[];
 
   // Logistics
   lastEncounter: string;
   nextScheduled: string | null;
-  lastPrescriptionDate: string; 
+  lastPrescriptionDate: string;
   insurance: string;
-  
+
   // Clinical Markers & Baseline
   baseline: PatientBaseline;
   creatinine: LabResult[];
   hba1c: LabResult[];
-  bnp: LabResult[]; 
-  weight: LabResult[]; 
-  feve: number; 
-  egfr: number; 
+  bnp: LabResult[];
+  weight: LabResult[];
+  feve: number;
+  egfr: number;
 
   medications: Medication[];
   history: ClinicalEvent[]; // Timeline completa
+
+  // Capa 9: SDOH
+  socialVulnerability?: number; // 1-5
+  socialFactors?: string[]; // Tag list
 }
 
 // Business Value Metrics

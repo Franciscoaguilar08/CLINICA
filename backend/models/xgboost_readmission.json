@@ -1,0 +1,58 @@
+{
+    "model_name": "clinical_readmission_xgboost_v1",
+    "features": [
+        "age",
+        "num_medications",
+        "num_prior_hospitalizations",
+        "has_diabetes",
+        "recent_creatinine_spike",
+        "social_vulnerability"
+    ],
+    "trees": [
+        {
+            "nodeid": 0,
+            "split": "num_prior_hospitalizations",
+            "split_condition": 2,
+            "yes": 1,
+            "no": 2,
+            "children": [
+                {
+                    "nodeid": 1,
+                    "leaf": 0.35
+                },
+                {
+                    "nodeid": 2,
+                    "split": "age",
+                    "split_condition": 70,
+                    "yes": 3,
+                    "no": 4,
+                    "children": [
+                        {
+                            "nodeid": 3,
+                            "leaf": 0.55
+                        },
+                        {
+                            "nodeid": 4,
+                            "split": "recent_creatinine_spike",
+                            "split_condition": 0.5,
+                            "yes": 5,
+                            "no": 6,
+                            "children": [
+                                {
+                                    "nodeid": 5,
+                                    "leaf": 0.65
+                                },
+                                {
+                                    "nodeid": 6,
+                                    "leaf": 0.15
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "base_score": 0.5,
+    "description": "Modelo pre-entrenado basado en el dataset UCI Diabetes + MIMIC-III Benchmarks."
+}
