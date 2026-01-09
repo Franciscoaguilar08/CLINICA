@@ -16,7 +16,7 @@ import {
     DollarSign, HeartPulse, Scale, Stethoscope, Building2, CheckCircle2, ArrowRight,
     Lock, AlertOctagon, User, TrendingUp, TrendingDown, Minus, Database, ShieldCheck,
     LayoutDashboard, Cpu, Plus, Library, GraduationCap, CalendarDays, History, Shield,
-    Pill, DatabaseZap, LogOut, Beaker
+    Pill, DatabaseZap, LogOut, Beaker, Sparkles, Terminal
 } from 'lucide-react';
 
 // --- Risk Trend Chart Component ---
@@ -502,7 +502,7 @@ const AIAnalysisView = ({ data }: { data: any }) => {
 };
 
 // --- Clinical Command Center (Dashboard) ---
-const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void, key?: any }) => {
+const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelectPatient: (p: Patient) => void, onAddPatient: () => void, setActiveModule: (m: 'dashboard' | 'abk_info') => void, key?: any }) => {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -573,6 +573,34 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                     </button>
                     <button onClick={onAddPatient} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm shadow-sm">
                         <Plus size={18} /> Nuevo Paciente
+                    </button>
+                </div>
+            </div>
+
+            {/* Quick Access to Abk Info (Restored Section) */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 rounded-2xl p-6 shadow-xl border border-slate-800 relative overflow-hidden group mb-8">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <Cpu size={120} />
+                </div>
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="max-w-xl">
+                        <div className="flex items-center gap-2 text-indigo-400 mb-2">
+                            <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                                <Sparkles size={16} />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-widest">IA Clínica Activa</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Abk Info: Inteligencia de Precisión</h2>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                            Analiza guías clínicas del MinSalud, interacciones farmacológicas y
+                            evidencia molecular en tiempo real para optimizar tus decisiones.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setActiveModule('abk_info')}
+                        className="bg-white text-slate-900 border-none px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all flex items-center gap-2 shadow-lg hover:-translate-y-0.5 whitespace-nowrap"
+                    >
+                        <Terminal size={16} /> Abrir Consola Clínica <ArrowRight size={16} />
                     </button>
                 </div>
             </div>
@@ -997,7 +1025,7 @@ const MainLayout = () => {
                     selectedPatient ? (
                         <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
                     ) : (
-                        <Dashboard key={refreshKey} onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} />
+                        <Dashboard key={refreshKey} onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} setActiveModule={setActiveModule} />
                     )
                 ) : (
                     <AbkInfo />
