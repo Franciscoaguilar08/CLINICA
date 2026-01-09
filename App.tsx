@@ -185,7 +185,7 @@ const LandingPage = () => {
             <div className="bg-slate-900 py-24 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-3xl mx-auto mb-16">
-                        <h2 className="text-blue-400 font-bold tracking-wider uppercase text-sm mb-3">La Diferiencia Técnica</h2>
+                        <h2 className="text-blue-400 font-bold tracking-wider uppercase text-sm mb-3">La Diferencia Técnica</h2>
                         <h3 className="text-3xl md:text-4xl font-bold mb-6">Un Motor de Riesgo diseñado para datos imperfectos.</h3>
                         <p className="text-slate-400 text-lg leading-relaxed">
                             Los modelos tradicionales fallan en LatAm porque esperan historias clínicas completas.
@@ -401,6 +401,40 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                     </div>
                 </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl border border-blue-100 p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Library size={18} className="text-blue-600" /> Fundamentación Teórica (Guías AR)
+                    </h3>
+                    <ul className="space-y-2">
+                        {data.argentinaGuidelines?.map((guide: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
+                                <div className="mt-0.5 min-w-[4px] h-4 bg-blue-500 rounded-full"></div>
+                                {guide}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <GraduationCap size={18} className="text-emerald-600" /> Evidencia Científica (Papers)
+                    </h3>
+                    <div className="space-y-3">
+                        {data.scientificPapers?.map((paper: any, idx: number) => (
+                            <div key={idx} className="flex flex-col gap-1 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                                <a href="#" className="font-bold text-sm text-slate-800 hover:text-blue-600 transition-colors line-clamp-1">
+                                    {paper.title}
+                                </a>
+                                <div className="flex justify-between items-center text-xs text-slate-400">
+                                    <span>{paper.source} ({paper.year})</span>
+                                </div>
+                                <p className="text-xs text-slate-500 italic mt-1 font-medium">"{paper.relevance}"</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
@@ -488,6 +522,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                         <HeartPulse size={24} />
                         <span className="text-2xl font-bold">{OUTCOMES_DATA.hospitalizationsAvoided}</span>
                     </div>
+                    <span className="text-xs text-emerald-600/80 font-medium mt-1">Estimadas este mes</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reducción Re-ingresos</span>
@@ -495,6 +530,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                         <TrendingDown size={24} />
                         <span className="text-2xl font-bold">{OUTCOMES_DATA.readmissionsReducedPercentage}%</span>
                     </div>
+                    <span className="text-xs text-blue-600/80 font-medium mt-1">vs. Promedio Histórico</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Pacientes Activos</span>
@@ -502,6 +538,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                         <User size={24} />
                         <span className="text-2xl font-bold">{OUTCOMES_DATA.activePatients}</span>
                     </div>
+                    <span className="text-xs text-slate-500 font-medium mt-1">Seguimiento continuo</span>
                 </div>
                 <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex flex-col text-white">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Ahorro Proyectado</span>
@@ -509,6 +546,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                         <DollarSign size={24} />
                         <span className="text-2xl font-bold">{OUTCOMES_DATA.estimatedSavings.toLocaleString()}</span>
                     </div>
+                    <span className="text-xs text-slate-400 font-medium mt-1">ROI Mensual Estimado</span>
                 </div>
             </div>
 
@@ -522,7 +560,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient }: { onSelectPatient: (p: Pat
                     <thead className="bg-white text-slate-500 text-xs uppercase font-semibold border-b border-slate-100">
                         <tr>
                             <th className="px-6 py-4">Paciente</th>
-                            <th className="px-6 py-4">Principal Driver</th>
+                            <th className="px-6 py-4">Principal Driver (SHAP)</th>
                             <th className="px-6 py-4">Probabilidad (30d)</th>
                             <th className="px-6 py-4">Ultimo Dato</th>
                             <th className="px-6 py-4">Acción</th>
@@ -604,7 +642,7 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4 mb-2">
-                <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-sm font-medium">
+                <button onClick={onBack} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors">
                     &larr; Volver al Tablero
                 </button>
             </div>
@@ -620,12 +658,14 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                             <span>{patient.age} años</span>
                             <span>•</span>
                             <span>{patient.gender}</span>
+                            <span>•</span>
+                            <span>ID: {patient.id}</span>
                         </div>
                     </div>
                 </div>
                 <div className="text-center bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-32">
-                    <div className="text-xs text-slate-500 font-semibold uppercase">Probabilidad (30d)</div>
-                    <div className={`text-2xl font-bold ${patient.riskScore > 50 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Probabilidad (30d)</div>
+                    <div className={`text-3xl font-extrabold ${patient.riskScore > 50 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {patient.riskScore}%
                     </div>
                 </div>
@@ -633,10 +673,10 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
 
             <div className="border-b border-slate-200">
                 <nav className="-mb-px flex space-x-8">
-                    <button onClick={() => setActiveTab('clinical')} className={`${activeTab === 'clinical' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                    <button onClick={() => setActiveTab('clinical')} className={`${activeTab === 'clinical' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-all`}>
                         <Activity size={16} /> Dashboard Clínico
                     </button>
-                    <button onClick={() => setActiveTab('timeline')} className={`${activeTab === 'timeline' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}>
+                    <button onClick={() => setActiveTab('timeline')} className={`${activeTab === 'timeline' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm flex items-center gap-2 transition-all`}>
                         <History size={16} /> Timeline Anti-Leakage
                     </button>
                 </nav>
@@ -656,8 +696,8 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                                 <CalendarDays size={16} /> Eventos Históricos (Features)
                             </h3>
                             <div className="relative border-l-2 border-slate-200 ml-3 space-y-8">
-                                {patient.history.map((event, i) => (
-                                    <div key={i} className="relative pl-6">
+                                {patient.history.length > 0 ? patient.history.map((event, i) => (
+                                    <div key={i} className="relative pl-6 animate-in slide-in-from-left duration-300" style={{ animationDelay: `${i * 100}ms` }}>
                                         <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></div>
                                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                                             <div>
@@ -668,7 +708,11 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
                                             {event.value && <span className="mt-2 sm:mt-0 px-2 py-1 bg-slate-100 rounded text-xs font-mono text-slate-700 border border-slate-200">{event.value}</span>}
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="text-center py-12 text-slate-400">
+                                        No hay eventos registrados en la historia clínica.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -676,19 +720,28 @@ const PatientDetail = ({ patient, onBack }: { patient: Patient, onBack: () => vo
 
                 <div className="space-y-6">
                     <div className="p-6 rounded-xl border shadow-sm relative overflow-hidden bg-gradient-to-b from-indigo-50 to-white border-indigo-100">
+                        <div className="absolute -right-10 -top-10 bg-indigo-500/5 w-32 h-32 rounded-full blur-2xl"></div>
                         <div className="flex items-center gap-2 mb-4 relative z-10">
                             <div className="p-1.5 rounded-lg text-white bg-indigo-600">
                                 <BrainCircuit size={20} />
                             </div>
                             <h3 className="font-bold text-indigo-900">Motor de Riesgo (IA)</h3>
                         </div>
-                        <p className="text-sm mb-6 relative z-10 leading-relaxed text-indigo-700">Análisis de riesgo basado en "Eventos Duros" y "Vacío de Datos".</p>
+                        <p className="text-sm mb-6 relative z-10 leading-relaxed text-indigo-700 font-medium">Análisis de riesgo predictivo basado en "Eventos Duros" y "Vacío de Datos".</p>
                         <button
                             onClick={handleRunAnalysis}
                             disabled={isAnalyzing}
-                            className="w-full text-white font-medium py-2.5 px-4 rounded-lg shadow-sm hover:shadow transition-all flex justify-center items-center gap-2 relative z-10 disabled:opacity-70 bg-indigo-600 hover:bg-indigo-700"
+                            className="w-full text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-200 transition-all flex justify-center items-center gap-2 relative z-10 disabled:opacity-70 bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5"
                         >
-                            {isAnalyzing ? "Analizando..." : "Analizar Riesgo & Polifarmacia"}
+                            {isAnalyzing ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Generando Proyección...
+                                </>
+                            ) : "Analizar Riesgo & Polifarmacia"}
                         </button>
                     </div>
                     <AIAnalysisView data={aiAnalysisData} />
@@ -703,6 +756,7 @@ const MainLayout = () => {
     const { isAuthenticated, logout, user } = useAuth();
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+    const [activeModule, setActiveModule] = useState<'dashboard' | 'abk_info'>('dashboard');
 
     if (!isAuthenticated) return <Navigate to="/login" />;
 
@@ -711,14 +765,31 @@ const MainLayout = () => {
             <ModelValidationHeader />
             <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setSelectedPatient(null)}>
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setSelectedPatient(null); setActiveModule('dashboard'); }}>
                         <BrandLogo size="sm" />
                         <span className="text-xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">Abk Clinical</span>
                     </div>
+
+                    {/* Main Navigation Tabs */}
+                    <div className="hidden md:flex items-center space-x-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                        <button
+                            onClick={() => { setActiveModule('dashboard'); setSelectedPatient(null); }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeModule === 'dashboard' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            <LayoutDashboard size={16} /> Panel Poblacional
+                        </button>
+                        <button
+                            onClick={() => { setActiveModule('abk_info'); setSelectedPatient(null); }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeModule === 'abk_info' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            <Cpu size={16} /> Inteligencia Clínica
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-2 text-sm text-blue-700 px-4 py-2 rounded-full border bg-blue-50 border-blue-100">
                             <Stethoscope size={14} />
-                            <span className="font-bold">{user?.email}</span>
+                            <span className="font-bold">Dr. {user?.email.split('@')[0]}</span>
                         </div>
                         <button onClick={logout} className="text-xs text-red-500 font-bold hover:text-red-700 transition-colors flex items-center gap-1">
                             <LogOut size={12} /> Cerrar Sesión
@@ -728,10 +799,14 @@ const MainLayout = () => {
             </header>
 
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
-                {selectedPatient ? (
-                    <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
+                {activeModule === 'dashboard' ? (
+                    selectedPatient ? (
+                        <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
+                    ) : (
+                        <Dashboard onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} />
+                    )
                 ) : (
-                    <Dashboard onSelectPatient={setSelectedPatient} onAddPatient={() => setIsAddPatientOpen(true)} />
+                    <AbkInfo />
                 )}
             </main>
 
@@ -745,7 +820,8 @@ const MainLayout = () => {
 // --- Private Route ---
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
     const { isAuthenticated } = useAuth();
-    return isAuthenticated ? children : <Navigate to="/login" replace />;
+    const location = useLocation();
+    return isAuthenticated ? children : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 function App() {
