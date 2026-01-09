@@ -929,7 +929,7 @@ const MainLayout = () => {
 };
 
 // --- Private Route ---
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
     return isAuthenticated ? children : <Navigate to="/login" state={{ from: location }} replace />;
