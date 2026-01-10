@@ -100,6 +100,15 @@ class XGBoostEngine {
             path: [node.split, ...result.path]
         };
     }
+
+    getMetadata() {
+        if (!this.model) return { name: 'Unloaded', version: '0.0', trained: null };
+        return {
+            name: this.model.model_name || 'Generic XGBoost',
+            version: this.model.version || '1.0',
+            trained: this.model.last_trained
+        };
+    }
 }
 
 // Singleton para el motor

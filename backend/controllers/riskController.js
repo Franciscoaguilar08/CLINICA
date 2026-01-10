@@ -15,13 +15,35 @@ export const getRiskHistory = async (req, res) => {
     }
 };
 
+// ISO 62304 / FDA Requirement: Clinical Input Validation
+const VALID_CATEGORIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'FLAG_REVIEW'];
+
 export const saveRiskAssessment = async (req, res) => {
     try {
         const { patient_id, score, category, source, summary, drivers } = req.body;
 
+        // 1. DATA INTEGRITY CHECK
         if (!patient_id || score === undefined) {
-            return res.status(400).json({ error: "Faltan datos (Paciente o Score)" });
+            return res.status(400).json({ error: "Faltan datos obligatorios (Paciente o Score)" });
         }
+
+        // 2. CLINICAL RANGE VALIDATION (Safety Layer)
+        const numericScore = parseFloat(score);
+        if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+            console.error(`[RISK AUDIT] Score inválido detectado: ${score}`);
+            return res.status(422).json({ error: "Score clínico fuera de rango válido [0-100]" });
+        }
+
+        // 3. CATEGORY VALIDATION
+        const cleanCategory = (category || 'MEDIUM').toUpperCase();
+        if (!VALID_CATEGORIES.includes(cleanCategory)) {
+            console.error(`[RISK AUDIT] Categoría desconocida: ${category}`);
+            return res.status(422).json({ error: `Categoría clínica inválida. Permitidas: ${VALID_CATEGORIES.join(', ')}` });
+        }
+
+        // 4. TRACEABILITY (Model Versioning)
+        const engineMeta = predictor.getMetadata();
+        const traceableSource = source || `AI Engine (${engineMeta.name} v${engineMeta.version})`;
 
         const text = `
             INSERT INTO risk_assessments (patient_id, score, category, source, summary, drivers)
@@ -30,15 +52,17 @@ export const saveRiskAssessment = async (req, res) => {
         `;
         const values = [
             patient_id,
-            score,
-            category || 'MEDIUM',
-            source || 'REALTIME_AI',
+            numericScore,
+            cleanCategory,
+            traceableSource,
             summary,
             JSON.stringify(drivers || [])
         ];
 
         const result = await query(text, values);
+        console.log(`[RISK LOG] Evaluación guardada: PID ${patient_id} | Score ${numericScore} | ${traceableSource}`);
         res.status(201).json(result.rows[0]);
+
     } catch (error) {
         console.error("Error al guardar evaluación de riesgo:", error);
         res.status(500).json({ error: "Error al persistir el análisis" });
