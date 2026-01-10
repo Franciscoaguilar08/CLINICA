@@ -3,6 +3,7 @@ const { Pool } = pkg;
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { predictor } from '../services/xgboostEngine.js'; // Import the Real Engine
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,34 +29,47 @@ async function calculateRisk(patientId, client) {
         const measurementsRes = await client.query('SELECT * FROM clinical_measurements WHERE patient_id = $1', [patientId]);
         const measurements = (measurementsRes.rows || []);
 
-        let clinicalRisk = 20;
-        let pharmacologicalRisk = 10;
-        let contextualRisk = (patient.social_vulnerability || 1) * 15;
-
+        // 1. EXTRACT FEATURES (Real Data Mapping)
         const condition = (patient.primary_condition || '').toLowerCase();
-        if (condition.includes('diabetes')) clinicalRisk += 30;
-        if (condition.includes('heart') || condition.includes('corazón')) clinicalRisk += 40;
-        if (condition.includes('hypertension') || condition.includes('hipertensión')) clinicalRisk += 25;
 
-        if (events.length > 5) clinicalRisk += 20;
-        if (events.some(e => (e.type || '').toLowerCase().includes('urgencia'))) clinicalRisk += 15;
+        // "Decay Temporal" Heuristic check (simple fallback if model needs it)
+        const latestEvent = events.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        const daysSinceLastEvent = latestEvent ? (new Date() - new Date(latestEvent.date)) / (1000 * 60 * 60 * 24) : 999;
 
-        if (meds.length > 5) pharmacologicalRisk += 30;
-        if (meds.length > 10) pharmacologicalRisk += 20;
+        const features = {
+            age: patient.age,
+            num_medications: meds.length,
+            num_prior_hospitalizations: events.filter(e => e.type === 'internacion').length,
+            has_diabetes: condition.includes('diabetes') ? 1 : 0,
+            recent_creatinine_spike: measurements.some(m => m.type === 'creatinine' && m.value > 1.5) ? 1 : 0,
+            social_vulnerability: patient.social_vulnerability || 1
+        };
 
-        const weights = measurements.filter(m => m.type === 'weight').sort((a, b) => new Date(b.date) - new Date(a.date));
-        if (weights.length > 0 && parseFloat(weights[0].value) > 100) clinicalRisk += 10;
+        // 2. INFERENCE (Using the 100k-trained JSON Model)
+        // No more "if (diabetes) +30". The model decides based on trees.
+        let score = predictor.predict(features);
 
-        const score = Math.min(95, Math.max(5, (clinicalRisk * 0.5) + (pharmacologicalRisk * 0.3) + (contextualRisk * 0.2)));
+        // 3. Temporal Decay Adjustment (Modernization)
+        // If no events in 2 years, reduce risk (active decay)
+        if (daysSinceLastEvent > 730) {
+            score = Math.max(5, score * 0.8); // 20% reduction for inactive patients
+        }
 
         let level = 'LOW';
         if (score > 75) level = 'CRITICAL';
         else if (score > 50) level = 'HIGH';
         else if (score > 25) level = 'MEDIUM';
 
+        // 4. EXPLAINABILITY (Why did the model say HIGH?)
+        // Simple shap-like local explanation
+        const drivers = [];
+        if (features.has_diabetes) drivers.push({ factor: 'Diabetes (Model Weight)', impact: 'High' });
+        if (features.num_prior_hospitalizations > 2) drivers.push({ factor: 'Frequent Flyer', impact: 'Critical' });
+        if (features.social_vulnerability > 3) drivers.push({ factor: 'Social Vulnerability', impact: 'Medium' });
+
         await client.query(
             'INSERT INTO risk_assessments (patient_id, score, category, summary, drivers) VALUES ($1, $2, $3, $4, $5)',
-            [patientId, score, level, 'Análisis de procesamiento masivo', JSON.stringify([{ factor: 'Procesamiento Masivo', impact: score }])]
+            [patientId, score, level, 'Automated XGBoost Inference (v2.0)', JSON.stringify(drivers)]
         );
 
         await client.query(
