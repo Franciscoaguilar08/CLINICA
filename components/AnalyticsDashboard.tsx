@@ -8,16 +8,29 @@ import { Activity, BrainCircuit, Users, AlertTriangle, TrendingUp, CheckCircle2 
 import api from '../src/services/api';
 
 export const AnalyticsDashboard: React.FC = () => {
-    const [stats, setStats] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 const res = await api.get('/analytics/stats');
-                setStats(res.data);
-            } catch (err) {
-                console.error("Error fetching analytics:", err);
+                // ISO 62304 VALIDATION LAYER
+                const data = res.data;
+
+                // 1. Structure Check
+                if (!data || typeof data !== 'object') throw new Error("Payload inválido");
+                if (!data.axisAverages || !data.riskDistribution) throw new Error("Estructura incompleta");
+
+                // 2. Range Logic Check (Sanity)
+                const clinicalScore = data.axisAverages.clinical;
+                if (typeof clinicalScore !== 'number' || clinicalScore < 0 || clinicalScore > 100) {
+                    throw new Error(`Score Clínico corrupto: ${clinicalScore}`);
+                }
+
+                setStats(data);
+            } catch (err: any) {
+                console.error("CRITICAL DASHBOARD ERROR:", err);
+                setValidationError(err.message || "Error desconocido");
             } finally {
                 setLoading(false);
             }
@@ -25,17 +38,32 @@ export const AnalyticsDashboard: React.FC = () => {
         fetchStats();
     }, []);
 
-    if (loading || !stats) return (
+    if (loading) return (
         <div className="flex flex-col items-center justify-center h-[500px] bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
             <p className="text-slate-400 font-medium animate-pulse">Calculando métricas poblacionales...</p>
         </div>
     );
 
+    // FAIL-SAFE UI (No silent errors)
+    if (validationError || !stats) return (
+        <div className="flex flex-col items-center justify-center h-[500px] bg-red-900/20 backdrop-blur-xl rounded-3xl border border-red-500/50 p-8 text-center">
+            <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+            <h3 className="text-2xl font-bold text-red-400 mb-2">Error de Integridad Clínica</h3>
+            <p className="text-slate-300 max-w-md">
+                El dashboard ha detenido su visualización para prevenir diagnósticos erróneos.
+                Se detectaron datos corruptos o incompletos desde el servidor.
+            </p>
+            <div className="mt-4 px-4 py-2 bg-black/50 rounded font-mono text-xs text-red-300">
+                LOG: {validationError}
+            </div>
+        </div>
+    );
+
     const radarData = [
-        { subject: 'Clínico', A: stats.axisAverages?.clinical || 0, fullMark: 100 },
-        { subject: 'Fármaco', A: stats.axisAverages?.pharmacological || 0, fullMark: 100 },
-        { subject: 'Contexto', A: stats.axisAverages?.contextual || 0, fullMark: 100 },
+        { subject: 'Clínico', A: stats.axisAverages.clinical, fullMark: 100 },
+        { subject: 'Fármaco', A: stats.axisAverages.pharmacological, fullMark: 100 },
+        { subject: 'Contexto', A: stats.axisAverages.contextual, fullMark: 100 },
         { subject: 'Social', A: 45, fullMark: 100 },
         { subject: 'Vulnerabilidad', A: 50, fullMark: 100 },
     ];
