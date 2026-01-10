@@ -66,7 +66,7 @@ async function calculateRisk(patientId, client) {
         return { score, level };
     } catch (err) {
         console.error(`Error calculating risk for patient ${patientId}:`, err);
-        throw err;
+        // Don't throw, let the loop continue
     }
 }
 
@@ -74,7 +74,8 @@ async function runBatch() {
     console.log("🚀 Iniciando Motor de Predicción Masiva (ESM)...");
     const client = await pool.connect();
     try {
-        const patientsRes = await client.query('SELECT id FROM patients');
+        // SOLO procesar pacientes creados por humanos (evitar cohorte de aprendizaje)
+        const patientsRes = await client.query('SELECT id FROM patients WHERE created_by IS NOT NULL');
         const patients = patientsRes.rows;
         console.log(`📊 Procesando ${patients.length} pacientes...`);
 

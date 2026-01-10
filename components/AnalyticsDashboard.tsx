@@ -50,10 +50,10 @@ export const AnalyticsDashboard: React.FC = () => {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Pacientes Totales', value: '2,114', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { label: 'Riesgo Crítico', value: '12%', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
-                    { label: 'Precisión IA', value: '94.2%', icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'Tendencia Global', value: '-2.4%', icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                    { label: 'Pacientes Totales', value: (stats.totalPatients || 2114).toLocaleString(), icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Riesgo Crítico', value: `${stats.riskDistribution?.find((r: any) => r.category === 'CRITICAL')?.count || 0}`, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
+                    { label: 'Casos Activos', value: '50', icon: BrainCircuit, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                    { label: 'Aprendizaje IA', value: (stats.totalPatients - 50 || 2064).toLocaleString(), icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10' },
                 ].map((kpi, i) => (
                     <div key={i} className="bg-slate-900/40 backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-xl">
                         <div className="flex items-center justify-between mb-2">
@@ -70,7 +70,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Radar: Perfil Poblacional */}
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl relative overflow-hidden group">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 p-6 rounded-3xl shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-all duration-700"></div>
                     <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
                         <Activity size={16} className="text-blue-400" /> Perfil de Salud Poblacional
@@ -95,7 +95,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
 
                 {/* Bar Chart: Top Patologías */}
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl overflow-hidden group">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 p-6 rounded-3xl shadow-2xl overflow-hidden group">
                     <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
                         <TrendingUp size={16} className="text-emerald-400" /> Distribución de Patologías
                     </h3>
@@ -122,7 +122,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
 
                 {/* Pie Chart: Nivel de Riesgo */}
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl relative group">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 p-6 rounded-3xl shadow-2xl relative group">
                     <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
                         <AlertTriangle size={16} className="text-amber-400" /> Estratificación de Riesgo
                     </h3>

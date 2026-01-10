@@ -4,7 +4,7 @@ import csv from 'csv-parser';
 import { query } from '../database/db.js';
 
 const CSV_PATH = path.resolve(process.cwd(), 'data_kaggle/healthcare_dataset.csv');
-const LIMIT = 2000; // Scaled limit for better calibration
+const LIMIT = 10000; // Scaled to 10k for deeper training
 
 async function importData() {
     console.log(`[Import] Iniciando importación desde: ${CSV_PATH}`);
@@ -65,7 +65,7 @@ async function importData() {
                         patientId,
                         row['Admission Type'].toLowerCase() === 'emergency' ? 'internacion' : 'consulta',
                         row['Date of Admission'],
-                        `Admisión en ${row.Hospital}. Doctor: ${row.Doctor}. Resultado: ${row['Test Results']}`
+                        `Admisión en ${row.Hospital}. Doctor: ${row.Doctor}. OUTCOME: ${row['Test Results']}`
                     ]);
 
                     // 3. Insertar Medicación
@@ -87,7 +87,7 @@ async function importData() {
                     console.log(`[Import] Progreso: ${results.indexOf(row)}/${results.length}...`);
                 }
             }
-            console.log("[Import] Finalizado exitosamente. 2000 registros procesados.");
+            console.log("[Import] Finalizado exitosamente. 10000 registros procesados.");
             process.exit(0);
         });
 }

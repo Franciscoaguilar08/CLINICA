@@ -1,0 +1,10 @@
+{
+    "version": "1.0",
+    "last_trained": "2026-01-10T05:42:27.897Z",
+    "weights": {
+        "hypertension": 0.15800000000000003,
+        "diabetes": 0.052,
+        "age_factor": 0.85
+    },
+    "training_set_size": 116246
+}

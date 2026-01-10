@@ -1,0 +1,16 @@
+{
+    "version": "2.0-temporal",
+    "description": "Modelo de detección de tendencias longitudinales",
+    "features": [
+        "glucose_slope_3y",
+        "creatinine_slope_3y"
+    ],
+    "thresholds": {
+        "glucose_slope_alert": 10,
+        "temporal_weight": 0.85
+    },
+    "stats": {
+        "trained_on": 10000,
+        "deterioration_rate": "0.01"
+    }
+}

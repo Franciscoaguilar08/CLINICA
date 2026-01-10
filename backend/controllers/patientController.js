@@ -4,7 +4,7 @@ import { query } from '../database/db.js';
 export const getPatients = async (req, res) => {
     try {
         // req.user viene del middleware de auth (ya sabemos quién es)
-        const result = await query('SELECT * FROM patients ORDER BY admission_date DESC');
+        const result = await query('SELECT * FROM patients WHERE risk_score > 0 ORDER BY admission_date DESC');
         res.json(result.rows);
     } catch (error) {
         console.error("Error al obtener pacientes:", error);

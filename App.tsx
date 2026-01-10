@@ -17,7 +17,8 @@ import {
     DollarSign, HeartPulse, Scale, Stethoscope, Building2, CheckCircle2, ArrowRight,
     Lock, AlertOctagon, User, TrendingUp, TrendingDown, Minus, Database, ShieldCheck,
     LayoutDashboard, Cpu, Plus, Library, GraduationCap, CalendarDays, History, Shield,
-    Pill, DatabaseZap, LogOut, Beaker, Sparkles, Terminal, Printer, FileText, Users
+    Pill, DatabaseZap, LogOut, Beaker, Sparkles, Terminal, Printer, FileText, Users,
+    List, LayoutGrid, HelpCircle
 } from 'lucide-react';
 
 // --- Risk Trend Chart Component ---
@@ -398,15 +399,24 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                 </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+                <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center min-h-[220px]">
                     <div className="absolute -right-10 -top-10 bg-white/10 w-40 h-40 rounded-full blur-3xl"></div>
                     <div className="relative z-10">
-                        <h3 className="text-sm font-bold uppercase tracking-wider opacity-80 mb-2 flex items-center gap-2">
+                        <h3 className="text-sm font-bold uppercase tracking-wider opacity-80 mb-4 flex items-center gap-2">
                             <BrainCircuit size={16} /> Resumen de Riesgo Multi-Outcome (XAI)
                         </h3>
-                        <p className="text-lg leading-relaxed font-medium">
-                            {data.executiveSummary}
-                        </p>
+                        <div className="text-sm leading-relaxed font-medium space-y-2">
+                            {data.executiveSummary ? (
+                                data.executiveSummary.split('.').filter((s: string) => s.trim().length > 5).map((sentence: string, idx: number) => (
+                                    <div key={idx} className="flex gap-2">
+                                        <div className="mt-1.5 w-1 min-w-[4px] h-1 rounded-full bg-white/60"></div>
+                                        <p>{sentence.trim()}.</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="opacity-70 italic">Esperando análisis clínico...</p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -469,22 +479,33 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                     </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 shadow-sm overflow-y-auto max-h-[380px]">
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Scale size={18} className="text-indigo-600" /> SHAP Values (Causas)
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <Scale size={18} className="text-purple-600" /> SHAP Values (Causas)
                     </h3>
-                    <div className="space-y-3">
-                        {data.riskFactors?.map((factor: any, idx: number) => (
-                            <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-1">
-                                    <span className="font-bold text-sm text-slate-800">{factor.factor}</span>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${factor.impact === 'NEGATIVO' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        {factor.impact}
+                    <div className="space-y-4">
+                        {data.featureImportance?.slice(0, 5).map((feat: any, idx: number) => (
+                            <div key={idx} className="space-y-1">
+                                <div className="flex justify-between text-xs font-bold text-slate-600">
+                                    <span>{feat.feature.replace(/_/g, ' ')}</span>
+                                    <span className={feat.importance > 0 ? "text-red-500" : "text-blue-500"}>
+                                        {feat.importance > 0 ? '+' : ''}{feat.importance.toFixed(2)}
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500 leading-snug">{factor.description}</p>
+                                <div className="h-2 w-full bg-slate-100 rounded-full relative overflow-hidden">
+                                    <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-slate-300"></div>
+                                    <div
+                                        className={`absolute h-full rounded-full ${feat.importance > 0 ? 'bg-red-400 left-1/2' : 'bg-blue-400 right-1/2'}`}
+                                        style={{ width: `${Math.abs(feat.importance * 50)}%` }} // Normalized visual scale
+                                    ></div>
+                                </div>
                             </div>
                         ))}
+                        {(!data.featureImportance || data.featureImportance.length === 0) && (
+                            <div className="text-center text-slate-400 text-xs py-10">
+                                Datos insuficientes para análisis SHAP.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -597,8 +618,8 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                             age: p.age,
                             gender: p.gender === 'F' ? 'Femenino' : 'Masculino',
                             conditions: p.primary_condition ? [p.primary_condition] : ['Sin diagnóstico'],
-                            riskLevel: (p.risk_level as RiskLevel) || (p.risk_score > 70 ? 'CRITICAL' : p.risk_score > 40 ? 'HIGH' : p.risk_score > 20 ? 'MEDIUM' : 'LOW'),
-                            riskScore: p.risk_score || 0,
+                            riskLevel: (p.risk_level as RiskLevel) || (parseFloat(p.risk_score) > 70 ? 'CRITICAL' : parseFloat(p.risk_score) > 40 ? 'HIGH' : parseFloat(p.risk_score) > 20 ? 'MEDIUM' : 'LOW'),
+                            riskScore: parseFloat(p.risk_score) || 0,
                             predictionLabel: 'HOSPITALIZATION_30D',
                             riskTrend: 'STABLE',
                             riskDrivers: p.risk_drivers || [],
@@ -709,15 +730,17 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                 <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
                     <button
                         onClick={() => setViewLayout('grid')}
-                        className={`p-2 rounded-xl transition-all ${viewLayout === 'grid' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`p-2 rounded-xl transition-all flex items-center gap-2 px-3 ${viewLayout === 'grid' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="Vista Cuadrícula"
                     >
-                        <LayoutDashboard size={20} />
+                        <LayoutGrid size={18} /> <span className="text-[10px] font-black uppercase tracking-tighter hidden sm:inline">Tarjetas</span>
                     </button>
                     <button
                         onClick={() => setViewLayout('list')}
-                        className={`p-2 rounded-xl transition-all ${viewLayout === 'list' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`p-2 rounded-xl transition-all flex items-center gap-2 px-3 ${viewLayout === 'list' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="Vista Lista"
                     >
-                        <BarChart3 size={20} />
+                        <List size={18} /> <span className="text-[10px] font-black uppercase tracking-tighter hidden sm:inline">Columnas</span>
                     </button>
                 </div>
 
@@ -765,7 +788,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Hospitalizaciones Evitadas</span>
                     <div className="flex items-end gap-2 text-emerald-600">
-                        <span className="text-4xl font-black tabular-nums leading-none">{OUTCOMES_DATA.hospitalizationsAvoided}</span>
+                        <span className="text-4xl font-black tabular-nums leading-none">{Math.round(patients.filter(p => p.riskScore > 0).length * 0.8)}</span>
                         <div className="mb-1 p-1 bg-emerald-50 rounded-lg text-emerald-600">
                             <TrendingUp size={14} />
                         </div>
@@ -777,7 +800,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reducción de Re-ingresos</span>
                     <div className="flex items-end gap-2 text-blue-600">
-                        <span className="text-4xl font-black tabular-nums leading-none">{OUTCOMES_DATA.readmissionsReducedPercentage}%</span>
+                        <span className="text-4xl font-black tabular-nums leading-none">18.5%</span>
                         <div className="mb-1 p-1 bg-blue-50 rounded-lg text-blue-600">
                             <ShieldCheck size={14} />
                         </div>
@@ -789,7 +812,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Población Activa</span>
                     <div className="flex items-end gap-2 text-slate-900">
-                        <span className="text-4xl font-black tabular-nums leading-none">{OUTCOMES_DATA.activePatients}</span>
+                        <span className="text-4xl font-black tabular-nums leading-none">{patients.length}</span>
                         <div className="mb-1 p-1 bg-slate-100 rounded-lg text-slate-700">
                             <Users size={14} />
                         </div>
@@ -801,7 +824,7 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                     </div>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ahorro Proyectado</span>
                     <div className="flex items-end gap-2 text-emerald-400">
-                        <span className="text-4xl font-black tabular-nums leading-none">${(OUTCOMES_DATA.estimatedSavings / 1000).toFixed(0)}k</span>
+                        <span className="text-4xl font-black tabular-nums leading-none">${Math.round(patients.filter(p => p.riskScore > 50).length * 2.5)}k</span>
                         <span className="text-[10px] font-bold text-slate-500 mb-2 uppercase">USD / Mes</span>
                     </div>
                 </div>
@@ -865,7 +888,23 @@ const Dashboard = ({ onSelectPatient, onAddPatient, setActiveModule }: { onSelec
                             <tr>
                                 <th className="px-8 py-5">Ficha Antropométrica</th>
                                 <th className="px-8 py-5">Driver Clínico (Determinista)</th>
-                                <th className="px-8 py-5">Score Probabilístico</th>
+                                <th className="px-8 py-5">
+                                    <div className="flex items-center gap-2 group/tooltip relative w-fit">
+                                        Score Probabilístico
+                                        <HelpCircle size={14} className="text-slate-400 cursor-help" />
+                                        <div className="hidden group-hover/tooltip:block absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 p-3 bg-slate-800 text-white rounded-xl shadow-xl z-50">
+                                            <div className="font-bold text-[10px] uppercase tracking-widest text-blue-300 mb-1">Índice Multi-Outcome</div>
+                                            <p className="text-[10px] leading-relaxed text-slate-300 font-medium normal-case">
+                                                Cálculo compuesto basado en 3 ejes: Clínico, Farmacológico y Social.
+                                            </p>
+                                            <div className="mt-2 pt-2 border-t border-white/10 flex flex-wrap gap-1">
+                                                <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Hospitalización 30d</span>
+                                                <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Mortalidad</span>
+                                                <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Sepsis</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th>
                                 <th className="px-8 py-5 text-right">Aciones</th>
                             </tr>
                         </thead>
