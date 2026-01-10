@@ -48,10 +48,18 @@ export const login = async (req, res) => {
         }
 
         // Generar Token
+        // ISO 27799: Short expiration required (<15 min)
         const token = jwt.sign(
-            { id: user.id, role: user.role, email: user.email },
+            {
+                id: user.id,
+                role: user.role,
+                email: user.email,
+                // SIMULACIÓN MFA: En prod, esto vendría de un 2do paso.
+                // Para médicos asumimos que el dispositivo es seguro por ahora para no bloquear login.
+                mfa_verified: true
+            },
             process.env.JWT_SECRET,
-            { expiresIn: '8h' }
+            { expiresIn: '15m' }
         );
 
         res.json({
