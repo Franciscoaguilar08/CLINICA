@@ -45,14 +45,14 @@ async function calculateRisk(patientId, client) {
             social_vulnerability: patient.social_vulnerability || 1
         };
 
-        // 2. INFERENCE (Using the 100k-trained JSON Model)
-        // No more "if (diabetes) +30". The model decides based on trees.
-        let score = predictor.predict(features);
+        // 2. INFERENCE (Using Real-Time Hot-Reloaded Model)
+        // 1. Real XAI: Extract score AND drivers from Tree Paths
+        const { score: rawScore, drivers } = predictor.predictWithExplanation(features);
+        let score = rawScore;
 
         // 3. Temporal Decay Adjustment (Modernization)
-        // If no events in 2 years, reduce risk (active decay)
         if (daysSinceLastEvent > 730) {
-            score = Math.max(5, score * 0.8); // 20% reduction for inactive patients
+            score = Math.max(5, score * 0.8);
         }
 
         let level = 'LOW';
@@ -60,16 +60,23 @@ async function calculateRisk(patientId, client) {
         else if (score > 50) level = 'HIGH';
         else if (score > 25) level = 'MEDIUM';
 
-        // 4. EXPLAINABILITY (Why did the model say HIGH?)
-        // Simple shap-like local explanation
-        const drivers = [];
-        if (features.has_diabetes) drivers.push({ factor: 'Diabetes (Model Weight)', impact: 'High' });
-        if (features.num_prior_hospitalizations > 2) drivers.push({ factor: 'Frequent Flyer', impact: 'Critical' });
-        if (features.social_vulnerability > 3) drivers.push({ factor: 'Social Vulnerability', impact: 'Medium' });
+        // 3. SANITY CHECK (The "Frankenstein" Safe-Guard)
+        // If Model screams DANGER (90+) but patient looks healthy...
+        // Something is wrong with the distribution match.
+        const isHealthyProfile = features.num_medications === 0 && features.num_prior_hospitalizations === 0 && !features.has_diabetes;
+
+        if (score > 85 && isHealthyProfile) {
+            level = 'FLAG_REVIEW'; // New category: "Human Intervention Needed"
+            drivers.unshift({
+                factor: 'AI Uncertainty',
+                impact: 'Review',
+                raw_contribution: 'Discordant Profile (High Score / Low Clinical Data)'
+            });
+        }
 
         await client.query(
             'INSERT INTO risk_assessments (patient_id, score, category, summary, drivers) VALUES ($1, $2, $3, $4, $5)',
-            [patientId, score, level, 'Automated XGBoost Inference (v2.0)', JSON.stringify(drivers)]
+            [patientId, score, level, 'XGBoost v2 (Tree-Path Explained)', JSON.stringify(drivers)]
         );
 
         await client.query(
