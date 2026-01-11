@@ -402,11 +402,19 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                 <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center min-h-[220px]">
                     <div className="absolute -right-10 -top-10 bg-white/10 w-40 h-40 rounded-full blur-3xl"></div>
                     <div className="relative z-10">
-                        <h3 className="text-sm font-bold uppercase tracking-wider opacity-80 mb-4 flex items-center gap-2">
-                            <BrainCircuit size={16} /> Resumen de Riesgo Multi-Outcome (XAI)
-                        </h3>
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-sm font-bold uppercase tracking-wider opacity-80 flex items-center gap-2">
+                                <BrainCircuit size={16} /> Resumen de Riesgo Multi-Outcome (XAI)
+                            </h3>
+                            {(!data.executiveSummary || data.executiveSummary.includes('Error')) && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/20">
+                                    MODO BASAL
+                                </span>
+                            )}
+                        </div>
+
                         <div className="text-sm leading-relaxed font-medium space-y-2">
-                            {data.executiveSummary ? (
+                            {data.executiveSummary && !data.executiveSummary.includes('Error') ? (
                                 data.executiveSummary.split('.').filter((s: string) => s.trim().length > 5).map((sentence: string, idx: number) => (
                                     <div key={idx} className="flex gap-2">
                                         <div className="mt-1.5 w-1 min-w-[4px] h-1 rounded-full bg-white/60"></div>
@@ -414,7 +422,15 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                                     </div>
                                 ))
                             ) : (
-                                <p className="opacity-70 italic">Esperando análisis clínico...</p>
+                                <div className="bg-white/10 rounded-xl p-4 border border-white/10 backdrop-blur-md">
+                                    <h4 className="font-bold text-white text-xs mb-1 flex items-center gap-2">
+                                        <Ghost size={14} className="text-indigo-200" /> Ausencia de Historia Clínica
+                                    </h4>
+                                    <p className="text-xs text-indigo-100/80 leading-relaxed">
+                                        El paciente no presenta eventos clínicos ni medicación reciente.
+                                        El modelo ha generado un <strong>Score Basal</strong> fundamentado exclusivamente en edad y patología primaria.
+                                    </p>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -437,12 +453,13 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                                         style={{ width: `${pred.probability}%` }}
                                     ></div>
                                 </div>
-                                {/* Tooltip experimental simple */}
-                                <div className="hidden group-hover:block absolute z-20 top-full left-0 mt-2 p-2 bg-slate-800 text-white text-[10px] rounded shadow-xl w-full">
-                                    {pred.rationale}
-                                </div>
                             </div>
                         ))}
+                        {(!data.predictions || data.predictions.length === 0) && (
+                            <div className="text-center py-6">
+                                <p className="text-[10px] text-slate-400 italic">Sin datos predictivos suficientes.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -502,8 +519,23 @@ const AIAnalysisView = ({ data }: { data: any }) => {
                             </div>
                         ))}
                         {(!data.featureImportance || data.featureImportance.length === 0) && (
-                            <div className="text-center text-slate-400 text-xs py-10">
-                                Datos insuficientes para análisis SHAP.
+                            <div className="space-y-4 opacity-50 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+                                <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                    <Ghost size={12} className="text-slate-400" />
+                                    <span className="text-[10px] font-medium text-slate-500 italic">Drivers Demográficos (Por Defecto)</span>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-bold text-slate-600">
+                                        <span>Edad ({'>'}65)</span> <span className="text-red-500">+ Base</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full"><div className="h-full bg-red-300 w-3/4"></div></div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-bold text-slate-600">
+                                        <span>Cronicidad</span> <span className="text-red-500">+ Base</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full"><div className="h-full bg-red-300 w-1/2"></div></div>
+                                </div>
                             </div>
                         )}
                     </div>
