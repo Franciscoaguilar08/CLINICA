@@ -8,6 +8,8 @@ import { Activity, BrainCircuit, Users, AlertTriangle, TrendingUp, CheckCircle2 
 import api from '../src/services/api';
 
 export const AnalyticsDashboard: React.FC = () => {
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
     const [validationError, setValidationError] = useState<string | null>(null);
 
     useEffect(() => {

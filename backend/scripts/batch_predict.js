@@ -95,10 +95,11 @@ async function runBatch() {
     console.log("🚀 Iniciando Motor de Predicción Masiva (ESM)...");
     const client = await pool.connect();
     try {
-        // SOLO procesar pacientes creados por humanos (evitar cohorte de aprendizaje)
-        const patientsRes = await client.query('SELECT id FROM patients WHERE created_by IS NOT NULL');
+        // FIXED: Include ingested patients (created_by IS NULL)
+        // LIMIT 50 to create a manageable "Active Cohort" for the dashboard
+        const patientsRes = await client.query('SELECT id FROM patients ORDER BY id DESC LIMIT 50');
         const patients = patientsRes.rows;
-        console.log(`📊 Procesando ${patients.length} pacientes...`);
+        console.log(`📊 Procesando Cohorte Activa (${patients.length} pacientes)...`);
 
         let count = 0;
         for (const p of patients) {
