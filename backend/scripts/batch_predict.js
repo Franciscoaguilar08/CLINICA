@@ -96,8 +96,8 @@ async function runBatch() {
     const client = await pool.connect();
     try {
         // FIXED: Include ingested patients (created_by IS NULL)
-        // LIMIT 50 to create a manageable "Active Cohort" for the dashboard
-        const patientsRes = await client.query('SELECT id FROM patients ORDER BY id DESC LIMIT 50');
+        // LIMIT 5000 to create a manageable "Active Cohort" for the dashboard
+        const patientsRes = await client.query('SELECT id FROM patients ORDER BY id DESC LIMIT 5000');
         const patients = patientsRes.rows;
         console.log(`📊 Procesando Cohorte Activa (${patients.length} pacientes)...`);
 
